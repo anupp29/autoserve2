@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Car, Zap, Calendar, Star, Settings, MessageCircle } from "lucide-react";
 
 const CustomerDashboard = () => (
