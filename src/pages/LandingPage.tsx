@@ -207,7 +207,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border/30 text-center">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">© 2024 AutoServe Precision Systems. All Rights Reserved.</p>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">© 2026 AutoServe Precision Systems. All Rights Reserved.</p>
           </div>
         </div>
       </footer>

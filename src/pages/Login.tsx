@@ -56,7 +56,7 @@ const Login = () => {
               </div>
             </div>
             <div className="mt-8 text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono">
-              © 2024 AutoServe Precision Systems.
+              © 2026 AutoServe Precision Systems.
             </div>
           </div>
         </section>
