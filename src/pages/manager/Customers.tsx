@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Download, ArrowRight, Filter } from "lucide-react";
+import { Plus, Download, ArrowRight, Filter, Zap } from "lucide-react";
 
 const tabs = ["All", "Premium", "Inactive"] as const;
 
