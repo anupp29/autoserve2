@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Plus, MoreHorizontal, Search } from "lucide-react";
+import { Plus, MoreHorizontal, Settings, Wrench, Zap, Snowflake, CircleDot, Disc } from "lucide-react";
 
 const categories = ["All Services", "Engine", "Brakes", "Electrical", "Transmission", "Tires & Suspension", "HVAC"] as const;
 
 const services = [
-  { name: "Synthetic Oil Change", sku: "OIL-SYN-01", price: "$89.99", duration: "0.75", category: "Engine", active: true, icon: "⚙️" },
-  { name: "Brake Pad Replacement", sku: "BRK-PAD-04", price: "$159.50", duration: "1.50", category: "Brakes", active: true, icon: "🔧" },
-  { name: "EV Battery Diagnostics", sku: "ELE-EV-99", price: "$210.00", duration: "2.00", category: "Electrical", active: false, icon: "🔌" },
-  { name: "A/C Recharge & Leak Test", sku: "HVAC-REC-02", price: "$129.00", duration: "1.25", category: "HVAC", active: true, icon: "❄️" },
-  { name: "Tire Rotation & Balance", sku: "TIR-ROT-05", price: "$45.00", duration: "0.50", category: "Tires & Suspension", active: true, icon: "🛞" },
+  { name: "Synthetic Oil Change", sku: "OIL-SYN-01", price: "$89.99", duration: "0.75", category: "Engine", active: true, icon: Settings, iconBg: "bg-primary/10", iconColor: "text-primary" },
+  { name: "Brake Pad Replacement", sku: "BRK-PAD-04", price: "$159.50", duration: "1.50", category: "Brakes", active: true, icon: Wrench, iconBg: "bg-destructive/10", iconColor: "text-destructive" },
+  { name: "EV Battery Diagnostics", sku: "ELE-EV-99", price: "$210.00", duration: "2.00", category: "Electrical", active: false, icon: Zap, iconBg: "bg-surface-container", iconColor: "text-muted-foreground" },
+  { name: "A/C Recharge & Leak Test", sku: "HVAC-REC-02", price: "$129.00", duration: "1.25", category: "HVAC", active: true, icon: Snowflake, iconBg: "bg-primary/10", iconColor: "text-primary" },
+  { name: "Tire Rotation & Balance", sku: "TIR-ROT-05", price: "$45.00", duration: "0.50", category: "Tires & Suspension", active: true, icon: Disc, iconBg: "bg-primary/10", iconColor: "text-primary" },
 ];
 
 const ManagerServices = () => {
@@ -49,7 +49,9 @@ const ManagerServices = () => {
         {filtered.map(s => (
           <div key={s.sku} className={`bg-card p-5 lg:p-6 rounded-xl border border-border/20 shadow-sm ${!s.active ? "opacity-60" : ""}`}>
             <div className="flex justify-between items-start mb-4">
-              <span className="text-2xl">{s.icon}</span>
+              <div className={`p-2.5 rounded-lg ${s.iconBg}`}>
+                <s.icon className={`w-5 h-5 ${s.iconColor}`} />
+              </div>
               <div className={`w-10 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-colors ${s.active ? "bg-primary justify-end" : "bg-surface-container-high justify-start"}`}>
                 <div className="w-4 h-4 bg-card rounded-full shadow-sm" />
               </div>
@@ -63,14 +65,17 @@ const ManagerServices = () => {
               </div>
               <div className="border-l border-border/30 pl-4">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Duration (Hrs)</p>
-                <p className="text-lg font-black text-on-surface">⏱ {s.duration}</p>
+                <div className="flex items-center gap-1">
+                  <CircleDot className="w-3.5 h-3.5 text-muted-foreground" />
+                  <p className="text-lg font-black text-on-surface">{s.duration}</p>
+                </div>
               </div>
             </div>
             <div className="flex justify-between items-center">
               <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded ${
                 s.active ? "text-primary bg-primary/10" : "text-destructive bg-destructive/10"
               }`}>
-                {s.active ? `● ${s.category}` : "Deactivated"}
+                {s.active ? s.category : "Deactivated"}
               </span>
               <button className="p-1 hover:bg-surface-container rounded"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button>
             </div>

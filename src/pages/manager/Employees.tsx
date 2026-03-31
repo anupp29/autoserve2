@@ -1,17 +1,17 @@
 import { Plus, MoreVertical } from "lucide-react";
 
 const employees = [
-  { name: "Alex Rivera", email: "alex.r@autoserve.com", role: "Senior Tech", roleColor: "text-primary bg-primary/10", id: "AS-2021-042", date: "Oct 12, 2021", active: true },
-  { name: "Sarah Jenkins", email: "s.jenkins@autoserve.com", role: "Admin", roleColor: "text-on-surface bg-surface-container", id: "AS-2022-015", date: "Feb 04, 2022", active: true },
-  { name: "Jordan Smith", email: "jordan.s@autoserve.com", role: "Technician", roleColor: "text-primary bg-primary/10", id: "AS-2023-112", date: "Nov 22, 2023", active: true },
-  { name: "Liam Foster", email: "l.foster@autoserve.com", role: "Technician", roleColor: "text-primary bg-primary/10", id: "AS-2020-008", date: "Jan 15, 2020", active: false },
+  { name: "Alex Rivera", email: "alex.r@autoserve.com", role: "Senior Tech", roleColor: "text-primary bg-primary/10", id: "AS-2021-042", date: "Oct 12, 2021", active: true, img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face" },
+  { name: "Sarah Jenkins", email: "s.jenkins@autoserve.com", role: "Admin", roleColor: "text-on-surface bg-surface-container", id: "AS-2022-015", date: "Feb 04, 2022", active: true, img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face" },
+  { name: "Jordan Smith", email: "jordan.s@autoserve.com", role: "Technician", roleColor: "text-primary bg-primary/10", id: "AS-2023-112", date: "Nov 22, 2023", active: true, img: "" },
+  { name: "Liam Foster", email: "l.foster@autoserve.com", role: "Technician", roleColor: "text-primary bg-primary/10", id: "AS-2020-008", date: "Jan 15, 2020", active: false, img: "" },
 ];
 
 const ManagerEmployees = () => (
   <div className="space-y-8">
     <div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-        <span>Organization</span><span>/</span><span className="text-primary font-semibold">Directory</span>
+        <span>Organization</span><span>›</span><span className="text-primary font-semibold">Directory</span>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -61,9 +61,13 @@ const ManagerEmployees = () => (
               <tr key={e.id} className="hover:bg-surface-container-low/50 transition-colors">
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-sm font-bold text-muted-foreground">
-                      {e.name.split(" ").map(n => n[0]).join("")}
-                    </div>
+                    {e.img ? (
+                      <img src={e.img} alt={e.name} className="w-9 h-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-sm font-bold text-muted-foreground">
+                        {e.name.split(" ").map(n => n[0]).join("")}
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-semibold text-on-surface">{e.name}</p>
                       <p className="text-xs text-primary">{e.email}</p>
@@ -103,7 +107,7 @@ const ManagerEmployees = () => (
       <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-xl">
         <h3 className="font-bold text-lg mb-2">Performance Insights</h3>
         <p className="text-sm text-slate-400 mb-4">AI detected a 12% increase in service speed since the onboarding of 3 new Senior Techs last month.</p>
-        <button className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors">View Full Report</button>
+        <button className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors uppercase tracking-wider">View Full Report</button>
       </div>
       <div className="bg-card p-6 rounded-xl border border-border/20 shadow-sm">
         <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-4">Role Distribution</h4>
