@@ -78,9 +78,9 @@ const ManagerDashboard = () => {
                 </div>
               </div>
             ))}
-            <button className="w-full text-center text-sm text-primary font-semibold py-2 border border-border/30 rounded-lg hover:bg-surface-container transition-colors">
+            <Link to="/manager/inventory" className="w-full text-center text-sm text-primary font-semibold py-2 border border-border/30 rounded-lg hover:bg-surface-container transition-colors block">
               Manage Full Inventory
-            </button>
+            </Link>
           </div>
         </div>
       </div>

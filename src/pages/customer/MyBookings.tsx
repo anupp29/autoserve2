@@ -49,11 +49,11 @@ const CustomerBookings = () => {
             </div>
           </div>
 
-          <div className="border-2 border-dashed border-border/30 rounded-xl flex flex-col items-center justify-center p-8 text-muted-foreground hover:border-primary/30 hover:text-primary transition-colors cursor-pointer">
+          <Link to="/customer/book" className="border-2 border-dashed border-border/30 rounded-xl flex flex-col items-center justify-center p-8 text-muted-foreground hover:border-primary/30 hover:text-primary transition-colors cursor-pointer">
             <Plus className="w-8 h-8 mb-2" />
             <h4 className="font-bold text-sm">Book New Service</h4>
             <p className="text-xs mt-1">Need maintenance? Schedule it now.</p>
-          </div>
+          </Link>
         </div>
       </div>
 
