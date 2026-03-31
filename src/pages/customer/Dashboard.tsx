@@ -52,7 +52,7 @@ const CustomerDashboard = () => (
       <div className="lg:col-span-2 bg-card p-6 rounded-xl border border-border/20 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-on-surface">Recent Work History</h3>
-          <button className="text-xs text-primary font-semibold">Download All Logs</button>
+          <Link to="/customer/history" className="text-xs text-primary font-semibold">Download All Logs</Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[500px]">
