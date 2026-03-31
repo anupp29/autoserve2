@@ -15,6 +15,7 @@ import ManagerInventory from "./pages/manager/Inventory";
 import ManagerEmployees from "./pages/manager/Employees";
 import ManagerCustomers from "./pages/manager/Customers";
 import ManagerReports from "./pages/manager/Reports";
+import ManagerServiceHistory from "./pages/manager/ServiceHistory";
 
 // Employee pages
 import EmployeeDashboard from "./pages/employee/Dashboard";
