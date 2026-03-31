@@ -2,9 +2,9 @@ import { Link } from "react-router-dom";
 import { Filter, Download, Settings, Wrench, Zap, Calendar, CheckCircle } from "lucide-react";
 
 const records = [
-  { service: "Major Interval Service", date: "Jan 14, 2024", miles: "42,500", cost: "$1,245.50", verified: true, diagnosis: "Standard 40k inspection revealed minor wear on rear brake pads and coolant acidity. Engine health stable.", work: ["Synthetic Oil & Filter Exchange", "Rear Brake Pad Replacement", "Coolant System Flush"], parts: ["P/N: 06L-115-562-B", "P/N: 8W0-698-451-R", "G12-EV0-C00L"], icon: Settings },
-  { service: "Tire Rotation & Balance", date: "Oct 02, 2023", miles: "38,120", cost: "$85.00", verified: true, diagnosis: "Customer reported slight vibration at 65mph. Found right front tire out of balance by 0.75oz.", work: ["High-speed dynamic balancing", "4-wheel rotation"], parts: ["SERVICE-TRB-01"], icon: Wrench },
-  { service: "Electrical Diagnostic & Repair", date: "Jul 12, 2023", miles: "35,400", cost: "$412.20", verified: true, diagnosis: "Engine fault code P0301. Found frayed wiring harness connecting to cylinder 1 ignition coil.", work: ["Harness pin extraction and rebuild", "Ignition coil replacement (preventative)"], parts: ["P/N: 06E-905-115-G", "P/N: 4H0-973-702"], icon: Zap },
+  { service: "Major Interval Service", date: "Jan 14, 2024", km: "42,500", cost: "₹12,450", verified: true, diagnosis: "Standard 40k inspection revealed minor wear on rear brake pads and coolant acidity. Engine health stable.", work: ["Synthetic Oil & Filter Exchange", "Rear Brake Pad Replacement", "Coolant System Flush"], parts: ["P/N: 06L-115-562-B", "P/N: 8W0-698-451-R", "G12-EV0-C00L"], icon: Settings },
+  { service: "Tyre Rotation & Balancing", date: "Oct 02, 2023", km: "38,120", cost: "₹1,850", verified: true, diagnosis: "Customer reported vibration at 80 kmph. Found right front tyre out of balance by 20g.", work: ["High-speed dynamic balancing", "4-wheel rotation"], parts: ["SERVICE-TRB-01"], icon: Wrench },
+  { service: "Electrical Diagnostic & Repair", date: "Jul 12, 2023", km: "35,400", cost: "₹8,420", verified: true, diagnosis: "Engine fault code P0301. Found frayed wiring harness connecting to cylinder 1 ignition coil.", work: ["Harness pin extraction and rebuild", "Ignition coil replacement"], parts: ["P/N: 06E-905-115-G", "P/N: 4H0-973-702"], icon: Zap },
 ];
 
 const CustomerServiceHistory = () => (
@@ -12,7 +12,7 @@ const CustomerServiceHistory = () => (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold text-on-surface tracking-tight">Service Timeline</h1>
-        <p className="text-sm text-muted-foreground mt-1">Historical records for VIN: <span className="text-primary font-semibold">JS1AG11B0452</span></p>
+        <p className="text-sm text-muted-foreground mt-1">Historical records for VIN: <span className="text-primary font-semibold">MA3FJEB1...</span></p>
       </div>
       <div className="flex gap-2 self-start">
         <button className="flex items-center gap-1.5 px-3 py-2 border border-border/30 rounded-lg text-xs font-medium hover:bg-surface-container active:scale-[0.98] transition-all"><Filter className="w-3.5 h-3.5" /> Filter</button>
@@ -31,7 +31,7 @@ const CustomerServiceHistory = () => (
                 </div>
                 <div>
                   <h3 className="font-bold text-on-surface">{r.service}</h3>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Completed {r.date} • {r.miles} Miles</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Completed {r.date} • {r.km} km</p>
                 </div>
               </div>
               <div className="text-right">
@@ -69,7 +69,7 @@ const CustomerServiceHistory = () => (
             <Zap className="w-4 h-4 text-amber-400" />
             <h4 className="font-bold text-sm">AI Precision Insight</h4>
           </div>
-          <p className="text-xs text-slate-400 mb-4">Based on your driving patterns and local climate, we recommend the following maintenance targets to maintain optimal performance.</p>
+          <p className="text-xs text-slate-400 mb-4">Based on your driving patterns and local climate, we recommend the following maintenance targets.</p>
           {[
             { name: "Spark Plug Replacement", badge: "High Priority", pct: 85 },
             { name: "Transmission Fluid Check", badge: "Projected", pct: 40 },
@@ -103,23 +103,6 @@ const CustomerServiceHistory = () => (
             <p className="text-sm text-emerald-600 font-semibold flex items-center justify-center gap-1"><CheckCircle className="w-3.5 h-3.5" /> Excellent</p>
             <p className="text-xs text-muted-foreground mt-2">Last scanned 2 days ago</p>
             <button className="mt-3 text-xs text-primary font-bold uppercase tracking-wider hover:underline">Run Scan</button>
-          </div>
-        </div>
-
-        {/* Elite Care Program */}
-        <div className="rounded-xl overflow-hidden group">
-          <div className="relative h-36">
-            <img
-              src="https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=400&h=200&fit=crop"
-              alt="Elite Care Program"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-              <h4 className="text-white font-bold">Elite Care Program</h4>
-              <p className="text-xs text-slate-300">Unlock priority scheduling and complimentary wash on every visit.</p>
-              <button className="mt-2 px-3 py-1.5 bg-white text-on-surface rounded text-xs font-bold hover:bg-white/90 active:scale-[0.98] transition-all">Learn More</button>
-            </div>
           </div>
         </div>
       </div>

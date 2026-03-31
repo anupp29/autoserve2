@@ -15,7 +15,7 @@ const Login = () => {
 
   const roles = [
     { id: "customer" as const, label: "Customer", icon: User },
-    { id: "employee" as const, label: "Employee", icon: Shield },
+    { id: "employee" as const, label: "Technician", icon: Shield },
     { id: "manager" as const, label: "Manager", icon: UserCog },
   ];
 
@@ -87,13 +87,13 @@ const Login = () => {
           <form className="space-y-5 lg:space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">
-                Professional Identifier
+                Email Address
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="email"
-                  placeholder="name@autoserve.systems"
+                  placeholder="name@autoserve.in"
                   className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground"
                 />
               </div>
@@ -102,10 +102,10 @@ const Login = () => {
             <div className="space-y-2">
               <div className="flex justify-between items-end px-1">
                 <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground">
-                  Secure Passphrase
+                  Password
                 </label>
                 <button type="button" className="text-[10px] font-bold uppercase tracking-[0.15em] text-primary hover:underline">
-                  Reset Code
+                  Forgot Password?
                 </button>
               </div>
               <div className="relative">
@@ -128,31 +128,25 @@ const Login = () => {
             <div className="flex items-center gap-3 py-2">
               <input type="checkbox" id="remember" className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary/20" />
               <label htmlFor="remember" className="text-xs text-muted-foreground font-medium select-none cursor-pointer">
-                Stay authenticated for 30 days
+                Keep me signed in for 30 days
               </label>
             </div>
 
-            <div className="pt-2 lg:pt-4 space-y-3 lg:space-y-4">
+            <div className="pt-2 lg:pt-4">
               <button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all duration-200 active:scale-[0.98]"
               >
-                <span className="text-sm">AUTHENTICATE SESSION</span>
+                <span className="text-sm">Sign In</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
-                type="button"
-                className="w-full bg-surface-container-low border border-border/20 hover:bg-surface-container-high text-on-surface font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-200"
-              >
-                <span className="text-sm">CONTINUE WITH ENTERPRISE SSO</span>
               </button>
             </div>
           </form>
 
           <div className="mt-8 lg:mt-12 pt-6 lg:pt-8 border-t border-border/10 text-center">
             <p className="text-muted-foreground text-xs">
-              Don't have an operator account?{" "}
-              <button className="text-primary font-bold hover:underline ml-1">Request Access</button>
+              New to AutoServe?{" "}
+              <button className="text-primary font-bold hover:underline ml-1">Create an Account</button>
             </p>
           </div>
         </section>
