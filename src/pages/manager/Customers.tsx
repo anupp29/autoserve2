@@ -110,7 +110,7 @@ const ManagerCustomers = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-xl">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-primary">⚡ AI Performance Insight</span>
+            <span className="text-[10px] uppercase tracking-wider font-bold text-primary flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> AI Performance Insight</span>
           </div>
           <h3 className="text-lg font-bold mb-2">Service demand is expected to peak in 48h.</h3>
           <p className="text-sm text-slate-400 mb-4">Predictive modeling suggests a 22% increase in electric drivetrain diagnostics based on recent customer vehicle updates.</p>
