@@ -43,7 +43,7 @@ const CustomerDashboard = () => (
           <div className="flex items-center gap-2 text-sm text-slate-300"><span className="text-primary">✓</span> Dynamic route optimization enabled</div>
           <div className="flex items-center gap-2 text-sm text-slate-300"><span className="text-primary">✓</span> Battery thermal management: Active</div>
         </div>
-        <button className="w-full py-2.5 bg-white/10 border border-white/20 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors">View Full Analysis</button>
+        <Link to="/customer/diagnostics" className="w-full py-2.5 bg-white/10 border border-white/20 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors block text-center">View Full Analysis</Link>
       </div>
     </div>
 
