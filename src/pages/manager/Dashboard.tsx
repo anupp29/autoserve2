@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { TrendingUp, DollarSign, Calendar, CheckCircle, AlertTriangle, MoreHorizontal } from "lucide-react";
 
 const ManagerDashboard = () => {
