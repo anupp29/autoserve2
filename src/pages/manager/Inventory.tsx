@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Package, AlertTriangle, Truck, DollarSign, MoreVertical, Filter, Download } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Package, AlertTriangle, Truck, DollarSign, MoreVertical, Filter, Download, Settings, Zap, Disc, Wrench, Droplets } from "lucide-react";
 
 const tabs = ["All Inventory", "Low Stock", "Consumables", "Hardware"] as const;
 
 const items = [
-  { name: "Brake Pads - Ceramic XL", sku: "SKU-BRK-44901", category: "Braking System", stock: 142, max: 160, status: "Optimal", statusColor: "text-emerald-600 bg-emerald-50", icon: "⚙️" },
-  { name: "Synthetic Engine Oil 5W-30", sku: "SKU-OIL-11202", category: "Lubricants", stock: 8, max: 65, status: "Critical Stock", statusColor: "text-destructive bg-destructive/10", icon: "🔴", action: "Restock Now" },
-  { name: "High Performance Spark Plug", sku: "SKU-ELC-77123", category: "Electrical", stock: 14, max: 50, status: "Low Stock", statusColor: "text-amber-600 bg-amber-50", icon: "⚡" },
-  { name: "Michelin Pilot Sport 4S", sku: "SKU-TIR-99044", category: "Tires & Wheels", stock: 12, max: 20, status: "Healthy", statusColor: "text-primary bg-primary/10", icon: "🛞" },
-  { name: "Standard Oil Filter (Case)", sku: "SKU-FLT-33410", category: "Filters", stock: 4, max: 12, status: "In Transit", statusColor: "text-primary bg-primary/10", icon: "🔧" },
+  { name: "Brake Pads - Ceramic XL", sku: "SKU-BRK-44901", category: "Braking System", stock: 142, max: 160, status: "Optimal", statusColor: "text-emerald-600 bg-emerald-50", icon: Settings, iconBg: "bg-primary/10", iconColor: "text-primary" },
+  { name: "Synthetic Engine Oil 5W-30", sku: "SKU-OIL-11202", category: "Lubricants", stock: 8, max: 65, status: "Critical Stock", statusColor: "text-destructive bg-destructive/10", icon: Droplets, iconBg: "bg-destructive/10", iconColor: "text-destructive", action: "Restock Now" },
+  { name: "High Performance Spark Plug", sku: "SKU-ELC-77123", category: "Electrical", stock: 14, max: 50, status: "Low Stock", statusColor: "text-amber-600 bg-amber-50", icon: Zap, iconBg: "bg-amber-50", iconColor: "text-amber-600" },
+  { name: "Michelin Pilot Sport 4S", sku: "SKU-TIR-99044", category: "Tires & Wheels", stock: 12, max: 20, status: "Healthy", statusColor: "text-primary bg-primary/10", icon: Disc, iconBg: "bg-primary/10", iconColor: "text-primary" },
+  { name: "Standard Oil Filter (Case)", sku: "SKU-FLT-33410", category: "Filters", stock: 4, max: 12, status: "In Transit", statusColor: "text-primary bg-primary/10", icon: Wrench, iconBg: "bg-primary/10", iconColor: "text-primary" },
 ];
 
 const ManagerInventory = () => {
@@ -25,38 +26,21 @@ const ManagerInventory = () => {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2 bg-primary/10 rounded-lg"><Package className="w-5 h-5 text-primary" /></div>
+        {[
+          { icon: Package, iconBg: "bg-primary/10", iconColor: "text-primary", label: "Total SKU", value: "1,284", sub: "+12 since last week", subColor: "text-emerald-600" },
+          { icon: AlertTriangle, iconBg: "bg-destructive/10", iconColor: "text-destructive", label: "Low Stock", value: "28", sub: "● Requires Immediate Action", subColor: "text-destructive", valueColor: "text-destructive" },
+          { icon: Truck, iconBg: "bg-primary/10", iconColor: "text-primary", label: "In Transit", value: "15", sub: "Expected delivery by Friday", subColor: "text-emerald-600" },
+          { icon: DollarSign, iconBg: "bg-primary/10", iconColor: "text-primary", label: "Valuation", value: "$248.5k", sub: "Inventory Asset Total", subColor: "text-muted-foreground" },
+        ].map(k => (
+          <div key={k.label} className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
+            <div className="flex justify-between items-start mb-3">
+              <div className={`p-2 rounded-lg ${k.iconBg}`}><k.icon className={`w-5 h-5 ${k.iconColor}`} /></div>
+            </div>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">{k.label}</p>
+            <p className={`text-2xl lg:text-3xl font-black mt-1 ${k.valueColor || "text-on-surface"}`}>{k.value}</p>
+            <p className={`text-[10px] ${k.subColor} mt-1`}>{k.sub}</p>
           </div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Total SKU</p>
-          <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">1,284</p>
-          <p className="text-[10px] text-emerald-600 mt-1">+12 since last week</p>
-        </div>
-        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2 bg-destructive/10 rounded-lg"><AlertTriangle className="w-5 h-5 text-destructive" /></div>
-          </div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Low Stock</p>
-          <p className="text-2xl lg:text-3xl font-black text-destructive mt-1">28</p>
-          <p className="text-[10px] text-destructive mt-1">● Requires Immediate Action</p>
-        </div>
-        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2 bg-primary/10 rounded-lg"><Truck className="w-5 h-5 text-primary" /></div>
-          </div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">In Transit</p>
-          <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">15</p>
-          <p className="text-[10px] text-emerald-600 mt-1">Expected delivery by Friday</p>
-        </div>
-        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2 bg-primary/10 rounded-lg"><DollarSign className="w-5 h-5 text-primary" /></div>
-          </div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Valuation</p>
-          <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">$248.5k</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Inventory Asset Total</p>
-        </div>
+        ))}
       </div>
 
       {/* Table */}
@@ -98,7 +82,9 @@ const ManagerInventory = () => {
                 <tr key={item.sku} className="hover:bg-surface-container-low/50 transition-colors">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{item.icon}</span>
+                      <div className={`p-2 rounded-lg ${item.iconBg}`}>
+                        <item.icon className={`w-5 h-5 ${item.iconColor}`} />
+                      </div>
                       <div>
                         <p className="text-sm font-semibold text-on-surface">{item.name}</p>
                         <p className="text-[10px] text-muted-foreground font-mono">{item.sku}</p>
