@@ -59,6 +59,9 @@ const App = () => (
           {/* Employee Routes */}
           <Route element={<RoleLayout role="employee" />}>
             <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+            <Route path="/employee/queue" element={<EmployeeServiceQueue />} />
+            <Route path="/employee/inventory" element={<EmployeeInventoryCheck />} />
+            <Route path="/employee/performance" element={<EmployeePerformance />} />
             <Route path="/employee/job/:id" element={<EmployeeJobDetail />} />
           </Route>
 
