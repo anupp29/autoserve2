@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +30,8 @@ import CustomerBookService from "./pages/customer/BookService";
 import CustomerBookings from "./pages/customer/MyBookings";
 import CustomerServiceHistory from "./pages/customer/ServiceHistory";
 import CustomerDiagnostics from "./pages/customer/AIDiagnostics";
+import CustomerValuation from "./pages/customer/Valuation";
+import CustomerAIAssistant from "./pages/customer/AIAssistant";
 
 import NotFound from "./pages/NotFound";
 
@@ -73,6 +75,8 @@ const App = () => (
             <Route path="/customer/bookings" element={<CustomerBookings />} />
             <Route path="/customer/history" element={<CustomerServiceHistory />} />
             <Route path="/customer/diagnostics" element={<CustomerDiagnostics />} />
+            <Route path="/customer/valuation" element={<CustomerValuation />} />
+            <Route path="/customer/assistant" element={<CustomerAIAssistant />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
