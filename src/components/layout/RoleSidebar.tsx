@@ -96,7 +96,7 @@ const RoleSidebar = ({ role, onClose }: RoleSidebarProps) => {
       <div className="px-4 mt-auto pt-4 border-t border-border/50 space-y-2">
         {role !== "customer" && (
           <Link
-            to={role === "manager" ? "/manager/bookings" : "/employee/dashboard"}
+            to={role === "manager" ? "/manager/bookings" : "/employee/queue"}
             className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-slate-900 to-slate-700 text-white rounded-xl shadow-lg text-sm font-semibold hover:scale-[1.02] active:scale-95 transition-transform"
           >
             <Plus className="w-4 h-4" />
