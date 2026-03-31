@@ -19,6 +19,9 @@ import ManagerReports from "./pages/manager/Reports";
 // Employee pages
 import EmployeeDashboard from "./pages/employee/Dashboard";
 import EmployeeJobDetail from "./pages/employee/JobDetail";
+import EmployeeServiceQueue from "./pages/employee/ServiceQueue";
+import EmployeeInventoryCheck from "./pages/employee/InventoryCheck";
+import EmployeePerformance from "./pages/employee/Performance";
 
 // Customer pages
 import CustomerDashboard from "./pages/customer/Dashboard";

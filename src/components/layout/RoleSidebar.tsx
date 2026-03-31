@@ -25,11 +25,9 @@ const managerNav: NavItem[] = [
 
 const employeeNav: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/employee/dashboard" },
-  { label: "Service Queue", icon: Wrench, path: "/employee/dashboard" },
-  { label: "Inventory", icon: Package, path: "/employee/dashboard" },
-  { label: "Customers", icon: Users, path: "/employee/dashboard" },
-  { label: "Staff", icon: UserCog, path: "/employee/dashboard" },
-  { label: "Reports", icon: BarChart3, path: "/employee/dashboard" },
+  { label: "Service Queue", icon: Wrench, path: "/employee/queue" },
+  { label: "Inventory", icon: Package, path: "/employee/inventory" },
+  { label: "Performance", icon: BarChart3, path: "/employee/performance" },
 ];
 
 const customerNav: NavItem[] = [
