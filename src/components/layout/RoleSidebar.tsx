@@ -25,11 +25,9 @@ const managerNav: NavItem[] = [
 
 const employeeNav: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/employee/dashboard" },
-  { label: "Service Queue", icon: Wrench, path: "/employee/dashboard" },
-  { label: "Inventory", icon: Package, path: "/employee/dashboard" },
-  { label: "Customers", icon: Users, path: "/employee/dashboard" },
-  { label: "Staff", icon: UserCog, path: "/employee/dashboard" },
-  { label: "Reports", icon: BarChart3, path: "/employee/dashboard" },
+  { label: "Service Queue", icon: Wrench, path: "/employee/queue" },
+  { label: "Inventory", icon: Package, path: "/employee/inventory" },
+  { label: "Performance", icon: BarChart3, path: "/employee/performance" },
 ];
 
 const customerNav: NavItem[] = [
@@ -98,7 +96,7 @@ const RoleSidebar = ({ role, onClose }: RoleSidebarProps) => {
       <div className="px-4 mt-auto pt-4 border-t border-border/50 space-y-2">
         {role !== "customer" && (
           <Link
-            to={role === "manager" ? "/manager/bookings" : "/employee/dashboard"}
+            to={role === "manager" ? "/manager/bookings" : "/employee/queue"}
             className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-slate-900 to-slate-700 text-white rounded-xl shadow-lg text-sm font-semibold hover:scale-[1.02] active:scale-95 transition-transform"
           >
             <Plus className="w-4 h-4" />
