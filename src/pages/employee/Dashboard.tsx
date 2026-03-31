@@ -1,16 +1,11 @@
 import { Link } from "react-router-dom";
-import { Plus, CheckCircle, Clock, Pause, ArrowRight, Wrench, AlertTriangle, MoreHorizontal } from "lucide-react";
+import { CheckCircle, Clock, Pause, ArrowRight, Wrench, AlertTriangle, MoreHorizontal, Zap } from "lucide-react";
 
 const EmployeeDashboard = () => (
   <div className="space-y-8">
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-      <div>
-        <h2 className="text-2xl font-black text-on-surface tracking-tight">Today's Assignments</h2>
-        <p className="text-muted-foreground text-sm">Workload summary for Wednesday, Oct 24</p>
-      </div>
-      <Link to="/employee/queue" className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 flex items-center gap-2 self-start">
-        <Plus className="w-4 h-4" /> New Service Order
-      </Link>
+    <div>
+      <h2 className="text-2xl font-black text-on-surface tracking-tight">Today's Assignments</h2>
+      <p className="text-muted-foreground text-sm">Workload summary for Wednesday, Oct 24</p>
     </div>
 
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -39,30 +34,48 @@ const EmployeeDashboard = () => (
               <span className="bg-primary text-primary-foreground text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider">Active Job</span>
               <span className="text-xs font-mono text-muted-foreground">ID: #AS-94021</span>
             </div>
-            <span className="text-xs text-muted-foreground">Started 09:15 AM</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded uppercase">Priority</span>
+              <span className="text-xs text-muted-foreground">Started 09:15 AM</span>
+            </div>
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-on-surface mb-1">Full Engine Diagnostic</h3>
-                <p className="text-sm text-muted-foreground">Tesla Model S • Performance Dual Motor • Red Multi-Coat</p>
+                <p className="text-sm text-muted-foreground">Hyundai Creta SX(O) • Phantom Black</p>
               </div>
               <div className="w-32 h-20 rounded-lg overflow-hidden bg-surface-container shrink-0">
                 <img
-                  src="https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=300&h=200&fit=crop"
-                  alt="Tesla Model S"
+                  src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=300&h=200&fit=crop"
+                  alt="Hyundai Creta"
                   className="w-full h-full object-cover"
                 />
               </div>
             </div>
+
+            {/* Previous Service History Summary */}
+            <div className="bg-surface-container-low border border-border/10 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">Previous Service Summary</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div><span className="text-muted-foreground">Last Service:</span> <span className="font-semibold text-on-surface">Oil Change — Sep 15</span></div>
+                <div><span className="text-muted-foreground">Total Visits:</span> <span className="font-semibold text-on-surface">7 services</span></div>
+                <div><span className="text-muted-foreground">Last Issue:</span> <span className="font-semibold text-on-surface">AC compressor noise</span></div>
+                <div><span className="text-muted-foreground">Customer Rating:</span> <span className="font-semibold text-on-surface">4.8 / 5</span></div>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-4 mb-6">
               <div className="bg-surface-container px-4 py-2 rounded-lg">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">VIN Number</p>
-                <p className="text-sm font-mono font-bold text-on-surface">5YJSA1E2XLF49XXXX</p>
+                <p className="text-sm font-mono font-bold text-on-surface">MALC381CXLM4XXXX</p>
               </div>
               <div className="bg-surface-container px-4 py-2 rounded-lg">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Mileage</p>
-                <p className="text-sm font-mono font-bold text-on-surface">32,410 mi</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Odometer</p>
+                <p className="text-sm font-mono font-bold text-on-surface">28,340 km</p>
               </div>
             </div>
             <div className="mb-6">
@@ -74,14 +87,14 @@ const EmployeeDashboard = () => (
                 <button className="text-xs text-primary font-semibold">Edit Notes</button>
               </div>
               <div className="bg-surface-container-low border border-border/20 rounded-lg p-4 text-sm text-muted-foreground leading-relaxed">
-                Customer reports intermittent power loss during high-torque acceleration. Thermal management system logs show minor temperature spike on rear motor assembly. Performing cooling loop pressure test and checking inverter firmware version...
+                Customer reports intermittent power loss during acceleration. AC compressor making clicking noise at idle. Performing full diagnostic scan and checking compressor clutch...
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-bold flex items-center justify-center gap-2">
+              <button className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
                 <CheckCircle className="w-4 h-4" /> Update Status
               </button>
-              <button className="px-6 py-3 border border-border/30 rounded-lg font-bold text-on-surface flex items-center justify-center gap-2">
+              <button className="px-6 py-3 border border-border/30 rounded-lg font-bold text-on-surface flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
                 <Pause className="w-4 h-4" /> Hold
               </button>
             </div>
@@ -95,7 +108,7 @@ const EmployeeDashboard = () => (
             {[
               { task: "Connect OBD-II and run system scan", done: true, time: "09:20 AM" },
               { task: "Verify cooling system fluid levels", done: true, time: "09:45 AM" },
-              { task: "Stress test rear motor inverter", done: false, inProgress: true },
+              { task: "Stress test AC compressor", done: false, inProgress: true },
               { task: "Final calibration and test drive", done: false },
             ].map((t, i) => (
               <div key={i} className={`flex items-center justify-between p-3 rounded-lg ${t.done ? "bg-emerald-50/50" : "bg-surface-container-low"} border border-border/10`}>
@@ -120,14 +133,14 @@ const EmployeeDashboard = () => (
           </div>
           <div className="space-y-4">
             {[
-              { priority: "High Priority", color: "text-destructive", service: "Brake Pad Replacement", vehicle: "2021 BMW M3 • Blue Metallic", tag: "Parts Ready", tagIcon: Wrench },
-              { priority: "Standard", color: "text-muted-foreground", service: "Full Synthetic Oil Change", vehicle: "2023 Ford F-150 Lightning", tag: "Waiting Room", tagIcon: Clock },
-              { priority: "Standard", color: "text-muted-foreground", service: "Tire Rotation & Alignment", vehicle: "2020 Honda Civic Type-R", tag: "Pending Alignment Rack", tagIcon: AlertTriangle, tagColor: "text-amber-600" },
+              { priority: "Express", color: "text-amber-600", service: "Brake Pad Replacement", vehicle: "2021 Tata Nexon • Blue", tag: "Parts Ready", tagIcon: Wrench },
+              { priority: "Priority", color: "text-destructive", service: "Full Synthetic Oil Change", vehicle: "2023 Mahindra XUV700", tag: "Customer Waiting", tagIcon: Clock },
+              { priority: "Standard", color: "text-muted-foreground", service: "Tyre Rotation & Alignment", vehicle: "2020 Honda City", tag: "Scheduled 2:30 PM", tagIcon: AlertTriangle, tagColor: "text-muted-foreground" },
             ].map((q, i) => (
               <Link to="/employee/queue" key={i} className="block p-3 rounded-lg border border-border/10 hover:bg-surface-container-low transition-colors group">
                 <div className="flex items-center justify-between mb-1">
                   <span className={`text-[10px] font-bold uppercase tracking-wider ${q.color} flex items-center gap-1`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${q.color === "text-destructive" ? "bg-destructive" : "bg-muted-foreground"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${q.color === "text-destructive" ? "bg-destructive" : q.color === "text-amber-600" ? "bg-amber-500" : "bg-muted-foreground"}`} />
                     {q.priority}
                   </span>
                   <span className="text-[10px] font-mono text-muted-foreground">EST: {i === 0 ? "45m" : i === 1 ? "30m" : "1h 20m"}</span>

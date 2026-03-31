@@ -15,6 +15,7 @@ import ManagerInventory from "./pages/manager/Inventory";
 import ManagerEmployees from "./pages/manager/Employees";
 import ManagerCustomers from "./pages/manager/Customers";
 import ManagerReports from "./pages/manager/Reports";
+import ManagerServiceHistory from "./pages/manager/ServiceHistory";
 
 // Employee pages
 import EmployeeDashboard from "./pages/employee/Dashboard";
@@ -51,6 +52,7 @@ const App = () => (
           <Route element={<RoleLayout role="manager" />}>
             <Route path="/manager/dashboard" element={<ManagerDashboard />} />
             <Route path="/manager/bookings" element={<ManagerBookings />} />
+            <Route path="/manager/history" element={<ManagerServiceHistory />} />
             <Route path="/manager/services" element={<ManagerServices />} />
             <Route path="/manager/inventory" element={<ManagerInventory />} />
             <Route path="/manager/employees" element={<ManagerEmployees />} />
