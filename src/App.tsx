@@ -34,6 +34,7 @@ import CustomerValuation from "./pages/customer/Valuation";
 import CustomerAIAssistant from "./pages/customer/AIAssistant";
 
 import NotFound from "./pages/NotFound";
+import ScanHandoff from "./pages/staff/ScanHandoff";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/manager/employees" element={<ManagerEmployees />} />
               <Route path="/manager/customers" element={<ManagerCustomers />} />
               <Route path="/manager/reports" element={<ManagerReports />} />
+              <Route path="/manager/scan" element={<ScanHandoff />} />
             </Route>
 
             {/* Employee Routes */}
@@ -69,6 +71,7 @@ const App = () => (
               <Route path="/employee/inventory" element={<EmployeeInventoryCheck />} />
               <Route path="/employee/performance" element={<EmployeePerformance />} />
               <Route path="/employee/job/:id" element={<EmployeeJobDetail />} />
+              <Route path="/employee/scan" element={<ScanHandoff />} />
             </Route>
 
             {/* Customer Routes */}

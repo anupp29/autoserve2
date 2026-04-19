@@ -1,15 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, User, UserCircle2, Loader2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, UserCircle2, Loader2 } from "lucide-react";
 import AutoServeLogo from "@/components/AutoServeLogo";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-
-const DEMO_ACCOUNTS = [
-  { label: "Manager", email: "manager@autoserve.in", password: "autoserve123" },
-  { label: "Technician", email: "tech@autoserve.in", password: "autoserve123" },
-  { label: "Customer", email: "customer@autoserve.in", password: "autoserve123" },
-];
 
 const Login = () => {
   const navigate = useNavigate();
@@ -23,7 +17,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Redirect after login
   useEffect(() => {
     if (!loading && user && role) {
       const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
@@ -38,40 +31,22 @@ const Login = () => {
     try {
       if (mode === "signin") {
         const { error } = await signIn(email, password);
-        if (error) {
-          toast.error(error.includes("Invalid login") ? "Invalid email or password" : error);
-        } else {
-          toast.success("Welcome back!");
-        }
+        if (error) toast.error(error.includes("Invalid login") ? "Invalid email or password" : error);
+        else toast.success("Welcome back!");
       } else {
         if (!fullName.trim()) { toast.error("Please enter your full name"); setBusy(false); return; }
         const { error } = await signUp(email, password, fullName);
-        if (error) {
-          toast.error(error.includes("already") ? "An account with this email already exists" : error);
-        } else {
-          toast.success("Account created! Signing you in...");
-        }
+        if (error) toast.error(error.includes("already") ? "An account with this email already exists" : error);
+        else toast.success("Account created! Signing you in...");
       }
     } finally {
       setBusy(false);
     }
   };
 
-  const handleDemoLogin = async (acc: typeof DEMO_ACCOUNTS[number]) => {
-    setEmail(acc.email);
-    setPassword(acc.password);
-    setMode("signin");
-    setBusy(true);
-    const { error } = await signIn(acc.email, acc.password);
-    if (error) toast.error(error);
-    else toast.success(`Signed in as ${acc.label}`);
-    setBusy(false);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center industrial-mesh p-4">
-      <main className="w-full max-w-[1200px] grid grid-cols-1 lg:grid-cols-12 bg-card shadow-lg rounded-xl overflow-hidden min-h-[600px] lg:min-h-[700px]">
-        {/* Left Branding */}
+      <main className="w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-12 bg-card shadow-lg rounded-xl overflow-hidden min-h-[560px] lg:min-h-[640px]">
         <section className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
           <div className="absolute inset-0 opacity-5 pointer-events-none industrial-mesh" />
           <div className="relative z-10">
@@ -84,43 +59,21 @@ const Login = () => {
               <span className="text-primary">Service Management</span>
             </h1>
             <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
-              Precision tools for automotive professionals. Monitor fleet status, manage work orders, and optimize shop floor efficiency in real-time.
+              Precision tools for automotive professionals. Monitor fleet status, manage work orders, and optimise shop floor efficiency in real-time.
             </p>
           </div>
-          <div className="relative z-10 space-y-6">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono mb-3">Quick demo access</p>
-              <div className="space-y-2">
-                {DEMO_ACCOUNTS.map((a) => (
-                  <button
-                    key={a.email}
-                    onClick={() => handleDemoLogin(a)}
-                    disabled={busy}
-                    className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-colors disabled:opacity-50 group"
-                  >
-                    <div className="text-left">
-                      <p className="text-xs font-bold text-white">{a.label}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">{a.email}</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono">
-              © 2026 AutoServe Precision Systems
-            </div>
+          <div className="relative z-10 text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono">
+            © 2026 AutoServe Precision Systems
           </div>
         </section>
 
-        {/* Right Form */}
-        <section className="col-span-1 lg:col-span-7 flex flex-col p-6 sm:p-8 md:p-16 lg:p-20 justify-center bg-card">
+        <section className="col-span-1 lg:col-span-7 flex flex-col p-6 sm:p-10 md:p-14 lg:p-16 justify-center bg-card">
           <div className="mb-8 lg:mb-10">
             <h2 className="text-2xl font-bold text-on-surface mb-2 tracking-tight">
               {mode === "signin" ? "Welcome back" : "Create your account"}
             </h2>
             <p className="text-muted-foreground text-sm mb-6">
-              {mode === "signin" ? "Sign in to access your AutoServe portal" : "Join AutoServe to manage your vehicle services"}
+              {mode === "signin" ? "Sign in to access your AutoServe portal" : "Customers can sign up here. Staff accounts are issued by your manager."}
             </p>
             <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-container rounded-xl border border-border/20">
               <button
@@ -207,26 +160,6 @@ const Login = () => {
               )}
             </button>
           </form>
-
-          <div className="mt-8 lg:hidden">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-mono mb-3 text-center">Quick demo access</p>
-            <div className="space-y-2">
-              {DEMO_ACCOUNTS.map((a) => (
-                <button
-                  key={a.email}
-                  onClick={() => handleDemoLogin(a)}
-                  disabled={busy}
-                  className="w-full flex items-center justify-between bg-surface-container-low border border-border/30 rounded-lg px-4 py-3 hover:bg-surface-container transition-colors disabled:opacity-50"
-                >
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-on-surface">{a.label}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono">{a.email}</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="mt-8 pt-6 border-t border-border/10 text-center">
             <Link to="/" className="text-muted-foreground text-xs hover:text-primary transition-colors">
