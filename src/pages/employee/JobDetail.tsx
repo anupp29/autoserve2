@@ -203,20 +203,33 @@ const EmployeeJobDetail = () => {
           <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
             <h4 className="font-bold text-on-surface mb-4">Update Status</h4>
             <div className="space-y-2">
+              {(booking.status === "pending" || booking.status === "confirmed") && !booking.checked_in_at && (
+                <Link to="/employee/scan" className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold active:scale-[0.98] transition-all">
+                  <ScanLine className="w-4 h-4" /> Scan Check-In QR
+                </Link>
+              )}
               {booking.status === "pending" && (
                 <button onClick={() => updateStatus("confirmed")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary/10 text-primary rounded-lg text-sm font-bold hover:bg-primary/20 transition-colors disabled:opacity-50">
                   <CheckCircle className="w-4 h-4" /> Confirm Booking
                 </button>
               )}
-              {(booking.status === "pending" || booking.status === "confirmed") && (
+              {booking.checked_in_at && booking.status !== "in_progress" && booking.status !== "ready_for_pickup" && booking.status !== "completed" && (
                 <button onClick={() => updateStatus("in_progress")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-50">
                   <PlayCircle className="w-4 h-4" /> Start Job
                 </button>
               )}
               {booking.status === "in_progress" && (
-                <button onClick={() => updateStatus("completed")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-50">
-                  <CheckCircle className="w-4 h-4" /> Mark Completed
-                </button>
+                <>
+                  <button onClick={() => updateStatus("ready_for_pickup")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-500 text-white rounded-lg text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-50 shadow-md shadow-emerald-200">
+                    <PackageCheck className="w-4 h-4" /> Mark Ready for Pickup
+                  </button>
+                  <p className="text-[10px] text-muted-foreground text-center px-2">This auto-issues the customer's collection QR. Use the Scan page to release the vehicle when they arrive.</p>
+                </>
+              )}
+              {booking.status === "ready_for_pickup" && (
+                <Link to="/employee/scan" className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold active:scale-[0.98] transition-all shadow-md">
+                  <ScanLine className="w-4 h-4" /> Scan Collection QR
+                </Link>
               )}
               {booking.status !== "completed" && booking.status !== "cancelled" && (
                 <button onClick={() => updateStatus("cancelled")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 border border-destructive/30 text-destructive rounded-lg text-sm font-bold hover:bg-destructive/5 transition-colors disabled:opacity-50">
