@@ -1,89 +1,137 @@
 import { Link } from "react-router-dom";
-import { Clock, CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, ArrowRight, Wrench } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useLiveTable } from "@/hooks/useRealtimeQuery";
+import { useProfilesByRole } from "@/hooks/useStaff";
+import { formatTime, formatDate } from "@/lib/format";
 
-const jobs = [
-  { id: "AS-94021", vehicle: "Tesla Model S", service: "Full Engine Diagnostic", priority: "High", status: "In Progress", statusColor: "text-primary bg-primary/10", time: "09:15 AM", customer: "Marcus Thorne" },
-  { id: "AS-94022", vehicle: "BMW X5 2021", service: "Brake Pad Replacement", priority: "Medium", status: "Queued", statusColor: "text-amber-600 bg-amber-50", time: "11:00 AM", customer: "Sarah Chen" },
-  { id: "AS-94023", vehicle: "Audi Q7 2019", service: "HVAC Recharge", priority: "Low", status: "Queued", statusColor: "text-muted-foreground bg-surface-container", time: "01:30 PM", customer: "Robert Miller" },
-  { id: "AS-94024", vehicle: "Ford F-150 Lightning", service: "Software Update", priority: "Medium", status: "Queued", statusColor: "text-amber-600 bg-amber-50", time: "03:00 PM", customer: "Liam Foster" },
-  { id: "AS-94019", vehicle: "Porsche Taycan 4S", service: "Tire Rotation & Balance", priority: "Low", status: "Completed", statusColor: "text-emerald-600 bg-emerald-50", time: "08:00 AM", customer: "Elena Langston" },
-];
+interface Booking {
+  id: string; status: string; priority: string; scheduled_at: string;
+  service_id: string; vehicle_id: string; customer_id: string; assigned_to: string | null;
+}
+interface Vehicle { id: string; make: string; model: string; year: number; registration: string; }
+interface Service { id: string; name: string; duration_minutes: number; }
 
-const EmployeeServiceQueue = () => (
-  <div className="space-y-8">
-    <div>
-      <h1 className="text-2xl font-bold text-on-surface tracking-tight">Service Queue</h1>
-      <p className="text-sm text-muted-foreground mt-1">Your assigned work orders for today, prioritized by urgency.</p>
-    </div>
+const statusColor: Record<string, string> = {
+  pending: "text-amber-600 bg-amber-50",
+  confirmed: "text-primary bg-primary/10",
+  in_progress: "text-primary bg-primary/10",
+  completed: "text-emerald-600 bg-emerald-50",
+  cancelled: "text-destructive bg-destructive/10",
+};
 
-    {/* Queue Stats */}
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {[
-        { label: "In Queue", value: "04", icon: Clock, color: "text-primary", bg: "bg-primary/10" },
-        { label: "In Progress", value: "01", icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50" },
-        { label: "Completed Today", value: "01", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
-        { label: "Avg. Turnaround", value: "2.4h", icon: Clock, color: "text-primary", bg: "bg-primary/10" },
-      ].map(k => (
-        <div key={k.label} className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <div className={`p-2 rounded-lg ${k.bg}`}><k.icon className={`w-5 h-5 ${k.color}`} /></div>
+const priorityColor: Record<string, string> = {
+  priority: "text-destructive bg-destructive/10",
+  express: "text-amber-600 bg-amber-50",
+  normal: "text-muted-foreground bg-surface-container",
+};
+
+const EmployeeServiceQueue = () => {
+  const { user } = useAuth();
+  const { data: bookings } = useLiveTable<Booking>(
+    "bookings",
+    (q) => q.eq("assigned_to", user?.id).order("scheduled_at"),
+    [user?.id],
+    { enabled: !!user }
+  );
+  const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q);
+  const { data: services } = useLiveTable<Service>("services", (q) => q);
+  const { byId: profilesById } = useProfilesByRole();
+
+  const veh = (id: string) => vehicles.find((v) => v.id === id);
+  const svc = (id: string) => services.find((s) => s.id === id);
+
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+  const todays = bookings.filter((b) => {
+    const t = new Date(b.scheduled_at).getTime();
+    return t >= todayStart.getTime() && t <= todayEnd.getTime();
+  });
+  const inQueue = todays.filter((b) => b.status === "pending" || b.status === "confirmed").length;
+  const inProg = todays.filter((b) => b.status === "in_progress").length;
+  const completed = todays.filter((b) => b.status === "completed").length;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-on-surface tracking-tight">Service Queue</h1>
+        <p className="text-sm text-muted-foreground mt-1">Your assigned work orders, prioritized by urgency.</p>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "In Queue Today", value: String(inQueue).padStart(2, "0"), icon: Clock, color: "text-primary", bg: "bg-primary/10" },
+          { label: "In Progress", value: String(inProg).padStart(2, "0"), icon: Wrench, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Completed Today", value: String(completed).padStart(2, "0"), icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Total Assigned", value: String(bookings.length).padStart(2, "0"), icon: AlertTriangle, color: "text-primary", bg: "bg-primary/10" },
+        ].map((k) => (
+          <div key={k.label} className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
+            <div className="flex justify-between items-start mb-3">
+              <div className={`p-2 rounded-lg ${k.bg}`}><k.icon className={`w-5 h-5 ${k.color}`} /></div>
+            </div>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">{k.label}</p>
+            <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">{k.value}</p>
           </div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">{k.label}</p>
-          <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">{k.value}</p>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
 
-    {/* Queue Table */}
-    <div className="bg-card rounded-xl border border-border/20 shadow-sm">
-      <div className="p-4 lg:p-6 border-b border-border/20">
-        <h3 className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Today's Work Orders</h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px]">
-          <thead>
-            <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/20">
-              <th className="text-left py-3 px-6 font-bold">Job ID</th>
-              <th className="text-left py-3 px-4 font-bold">Vehicle / Customer</th>
-              <th className="text-left py-3 px-4 font-bold">Service Type</th>
-              <th className="text-left py-3 px-4 font-bold">Priority</th>
-              <th className="text-left py-3 px-4 font-bold">Scheduled</th>
-              <th className="text-left py-3 px-4 font-bold">Status</th>
-              <th className="text-center py-3 px-4 font-bold">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/10">
-            {jobs.map(j => (
-              <tr key={j.id} className="hover:bg-surface-container-low/50 transition-colors">
-                <td className="py-4 px-6 text-sm font-mono font-bold text-on-surface">#{j.id}</td>
-                <td className="py-4 px-4">
-                  <p className="text-sm font-semibold text-on-surface">{j.vehicle}</p>
-                  <p className="text-xs text-muted-foreground">{j.customer}</p>
-                </td>
-                <td className="py-4 px-4 text-sm text-on-surface">{j.service}</td>
-                <td className="py-4 px-4">
-                  <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                    j.priority === "High" ? "text-destructive bg-destructive/10" : j.priority === "Medium" ? "text-amber-600 bg-amber-50" : "text-muted-foreground bg-surface-container"
-                  }`}>{j.priority}</span>
-                </td>
-                <td className="py-4 px-4 text-sm text-muted-foreground">{j.time}</td>
-                <td className="py-4 px-4">
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${j.statusColor}`}>
-                    {j.status === "In Progress" && "● "}{j.status}
-                  </span>
-                </td>
-                <td className="py-4 px-4 text-center">
-                  <Link to={`/employee/job/${j.id}`} className="p-1.5 text-primary hover:bg-primary/10 rounded inline-flex">
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </td>
+      <div className="bg-card rounded-xl border border-border/20 shadow-sm">
+        <div className="p-4 lg:p-6 border-b border-border/20">
+          <h3 className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">All Assigned Work Orders</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/20">
+                <th className="text-left py-3 px-6 font-bold">Job</th>
+                <th className="text-left py-3 px-4 font-bold">Vehicle / Customer</th>
+                <th className="text-left py-3 px-4 font-bold">Service</th>
+                <th className="text-left py-3 px-4 font-bold">Priority</th>
+                <th className="text-left py-3 px-4 font-bold">Scheduled</th>
+                <th className="text-left py-3 px-4 font-bold">Status</th>
+                <th className="text-center py-3 px-4 font-bold">Open</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border/10">
+              {bookings.length === 0 && (
+                <tr><td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">No jobs assigned to you yet.</td></tr>
+              )}
+              {bookings.map((j) => {
+                const v = veh(j.vehicle_id); const s = svc(j.service_id);
+                const cust = profilesById[j.customer_id]?.full_name || "Customer";
+                return (
+                  <tr key={j.id} className="hover:bg-surface-container-low/50 transition-colors">
+                    <td className="py-4 px-6 text-sm font-mono font-bold text-on-surface">#{j.id.slice(0, 8).toUpperCase()}</td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm font-semibold text-on-surface">{v ? `${v.year} ${v.make} ${v.model}` : "Vehicle"}</p>
+                      <p className="text-xs text-muted-foreground">{cust}</p>
+                    </td>
+                    <td className="py-4 px-4 text-sm text-on-surface">{s?.name || "Service"}</td>
+                    <td className="py-4 px-4">
+                      <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${priorityColor[j.priority]}`}>{j.priority}</span>
+                    </td>
+                    <td className="py-4 px-4 text-sm text-muted-foreground">
+                      {formatDate(j.scheduled_at)} • {formatTime(j.scheduled_at)}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${statusColor[j.status]}`}>
+                        {j.status.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <Link to={`/employee/job/${j.id}`} className="p-1.5 text-primary hover:bg-primary/10 rounded inline-flex">
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default EmployeeServiceQueue;

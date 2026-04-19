@@ -1,72 +1,112 @@
-import { Package, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Package, AlertTriangle, Search, Minus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useLiveTable } from "@/hooks/useRealtimeQuery";
+import { formatINR } from "@/lib/format";
+import { toast } from "sonner";
 
-const parts = [
-  { name: "Brake Pads - Ceramic XL", sku: "SKU-BRK-44901", stock: 142, max: 160, status: "Optimal", statusColor: "text-emerald-600 bg-emerald-50" },
-  { name: "Synthetic Engine Oil 5W-30", sku: "SKU-OIL-11202", stock: 8, max: 65, status: "Critical", statusColor: "text-destructive bg-destructive/10" },
-  { name: "High Performance Spark Plug", sku: "SKU-ELC-77123", stock: 14, max: 50, status: "Low Stock", statusColor: "text-amber-600 bg-amber-50" },
-  { name: "Standard Oil Filter (Case)", sku: "SKU-FLT-33410", stock: 4, max: 12, status: "In Transit", statusColor: "text-primary bg-primary/10" },
-  { name: "Michelin Pilot Sport 4S", sku: "SKU-TIR-99044", stock: 12, max: 20, status: "Healthy", statusColor: "text-primary bg-primary/10" },
-  { name: "Radiator Coolant G12", sku: "SKU-COL-55012", stock: 22, max: 30, status: "Optimal", statusColor: "text-emerald-600 bg-emerald-50" },
-];
+interface Item {
+  id: string; name: string; sku: string; category: string; quantity: number;
+  reorder_level: number; unit_price: number; supplier: string | null;
+}
 
-const EmployeeInventoryCheck = () => (
-  <div className="space-y-8">
-    <div>
-      <h1 className="text-2xl font-bold text-on-surface tracking-tight">Parts & Inventory</h1>
-      <p className="text-sm text-muted-foreground mt-1">Quick reference for available parts. Contact Manager for restocking.</p>
-    </div>
+const EmployeeInventoryCheck = () => {
+  const { data: items } = useLiveTable<Item>("inventory", (q) => q.order("name"));
+  const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
 
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-      <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-        <div className="p-2 bg-primary/10 rounded-lg w-fit mb-3"><Package className="w-5 h-5 text-primary" /></div>
-        <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Available SKUs</p>
-        <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">1,284</p>
-      </div>
-      <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-        <div className="p-2 bg-destructive/10 rounded-lg w-fit mb-3"><AlertTriangle className="w-5 h-5 text-destructive" /></div>
-        <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Low Stock Alerts</p>
-        <p className="text-2xl lg:text-3xl font-black text-destructive mt-1">28</p>
-      </div>
-      <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-        <div className="p-2 bg-primary/10 rounded-lg w-fit mb-3"><Package className="w-5 h-5 text-primary" /></div>
-        <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">In Transit</p>
-        <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">15</p>
-      </div>
-    </div>
+  const filtered = items.filter((i) =>
+    i.name.toLowerCase().includes(search.toLowerCase()) ||
+    i.sku.toLowerCase().includes(search.toLowerCase())
+  );
 
-    <div className="bg-card rounded-xl border border-border/20 shadow-sm">
-      <div className="p-4 lg:p-6 border-b border-border/20">
-        <h3 className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Frequently Used Parts</h3>
+  const lowCount = items.filter((i) => i.quantity <= i.reorder_level).length;
+  const totalSkus = items.length;
+  const totalValue = items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
+
+  const consume = async (item: Item) => {
+    if (item.quantity <= 0) return;
+    setBusy(item.id);
+    const { error } = await supabase
+      .from("inventory")
+      .update({ quantity: item.quantity - 1 })
+      .eq("id", item.id);
+    setBusy(null);
+    if (error) toast.error(error.message);
+    else toast.success(`Used 1 × ${item.name}`);
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-on-surface tracking-tight">Parts & Inventory</h1>
+        <p className="text-sm text-muted-foreground mt-1">Check stock and log parts consumption. Manager handles restocking.</p>
       </div>
-      <div className="divide-y divide-border/10">
-        {parts.map(p => (
-          <div key={p.sku} className="flex items-center justify-between p-4 lg:px-6 hover:bg-surface-container-low/50 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-surface-container rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-on-surface">{p.name}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">{p.sku}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${p.stock / p.max > 0.5 ? "bg-primary" : p.stock / p.max > 0.2 ? "bg-amber-500" : "bg-destructive"}`}
-                    style={{ width: `${(p.stock / p.max) * 100}%` }}
-                  />
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
+          <div className="p-2 bg-primary/10 rounded-lg w-fit mb-3"><Package className="w-5 h-5 text-primary" /></div>
+          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Total SKUs</p>
+          <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1">{totalSkus}</p>
+        </div>
+        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
+          <div className="p-2 bg-destructive/10 rounded-lg w-fit mb-3"><AlertTriangle className="w-5 h-5 text-destructive" /></div>
+          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Low Stock</p>
+          <p className="text-2xl lg:text-3xl font-black text-destructive mt-1">{lowCount}</p>
+        </div>
+        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm col-span-2 lg:col-span-1">
+          <div className="p-2 bg-emerald-50 rounded-lg w-fit mb-3"><Package className="w-5 h-5 text-emerald-600" /></div>
+          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">Inventory Value</p>
+          <p className="text-2xl lg:text-3xl font-black text-on-surface mt-1 font-mono">{formatINR(totalValue)}</p>
+        </div>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or SKU…"
+          className="w-full pl-11 pr-4 py-3 bg-card border border-border/20 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+      </div>
+
+      <div className="bg-card rounded-xl border border-border/20 shadow-sm">
+        <div className="divide-y divide-border/10">
+          {filtered.length === 0 && <div className="p-12 text-center text-sm text-muted-foreground">No parts found.</div>}
+          {filtered.map((p) => {
+            const isLow = p.quantity <= p.reorder_level;
+            const isCritical = p.quantity <= Math.floor(p.reorder_level / 2);
+            const pct = Math.min(100, (p.quantity / Math.max(p.reorder_level * 2, 1)) * 100);
+            return (
+              <div key={p.id} className="flex items-center justify-between p-4 lg:px-6 hover:bg-surface-container-low/50 transition-colors gap-4">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 bg-surface-container rounded-lg flex items-center justify-center shrink-0">
+                    <Package className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-on-surface truncate">{p.name}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">{p.sku} • {p.category}</p>
+                  </div>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{p.stock}/{p.max}</span>
+                <div className="flex items-center gap-4 shrink-0">
+                  <div className="hidden sm:flex items-center gap-3">
+                    <div className="w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${isCritical ? "bg-destructive" : isLow ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{p.quantity} left</span>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${isCritical ? "text-destructive bg-destructive/10" : isLow ? "text-amber-700 bg-amber-100" : "text-emerald-700 bg-emerald-100"}`}>
+                    {isCritical ? "Critical" : isLow ? "Low" : "OK"}
+                  </span>
+                  <button onClick={() => consume(p)} disabled={busy === p.id || p.quantity <= 0}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-40">
+                    <Minus className="w-3 h-3" /> Use 1
+                  </button>
+                </div>
               </div>
-              <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${p.statusColor} whitespace-nowrap`}>{p.status}</span>
-            </div>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default EmployeeInventoryCheck;
