@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Wrench, Package, Users, UserCog, BarChart3,
   LogOut, ClipboardList, Car, Calendar, History,
@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import AutoServeLogo from "@/components/AutoServeLogo";
 import type { UserRole } from "./RoleLayout";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface NavItem {
   label: string;

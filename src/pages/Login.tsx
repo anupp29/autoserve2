@@ -1,23 +1,72 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, User, Shield, UserCog } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User, UserCircle2, Loader2 } from "lucide-react";
 import AutoServeLogo from "@/components/AutoServeLogo";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+const DEMO_ACCOUNTS = [
+  { label: "Manager", email: "manager@autoserve.in", password: "autoserve123" },
+  { label: "Technician", email: "tech@autoserve.in", password: "autoserve123" },
+  { label: "Customer", email: "customer@autoserve.in", password: "autoserve123" },
+];
 
 const Login = () => {
   const navigate = useNavigate();
-  const [role, setRole] = useState<"customer" | "employee" | "manager">("customer");
-  const [showPassword, setShowPassword] = useState(false);
+  const location = useLocation();
+  const { user, role, loading, signIn, signUp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // Redirect after login
+  useEffect(() => {
+    if (!loading && user && role) {
+      const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+      navigate(from && from !== "/login" ? from : `/${role}/dashboard`, { replace: true });
+    }
+  }, [user, role, loading, navigate, location]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate(`/${role}/dashboard`);
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (mode === "signin") {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast.error(error.includes("Invalid login") ? "Invalid email or password" : error);
+        } else {
+          toast.success("Welcome back!");
+        }
+      } else {
+        if (!fullName.trim()) { toast.error("Please enter your full name"); setBusy(false); return; }
+        const { error } = await signUp(email, password, fullName);
+        if (error) {
+          toast.error(error.includes("already") ? "An account with this email already exists" : error);
+        } else {
+          toast.success("Account created! Signing you in...");
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const roles = [
-    { id: "customer" as const, label: "Customer", icon: User },
-    { id: "employee" as const, label: "Technician", icon: Shield },
-    { id: "manager" as const, label: "Manager", icon: UserCog },
-  ];
+  const handleDemoLogin = async (acc: typeof DEMO_ACCOUNTS[number]) => {
+    setEmail(acc.email);
+    setPassword(acc.password);
+    setMode("signin");
+    setBusy(true);
+    const { error } = await signIn(acc.email, acc.password);
+    if (error) toast.error(error);
+    else toast.success(`Signed in as ${acc.label}`);
+    setBusy(false);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center industrial-mesh p-4">
@@ -38,25 +87,28 @@ const Login = () => {
               Precision tools for automotive professionals. Monitor fleet status, manage work orders, and optimize shop floor efficiency in real-time.
             </p>
           </div>
-          <div className="relative z-10">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6 backdrop-blur-md">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] uppercase tracking-[0.15em] font-mono text-slate-400">System Status: Optimal</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-1">Active Nodes</div>
-                  <div className="font-mono text-xl font-bold tracking-tight">1,204</div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-1">Latency</div>
-                  <div className="font-mono text-xl font-bold tracking-tight">14ms</div>
-                </div>
+          <div className="relative z-10 space-y-6">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono mb-3">Quick demo access</p>
+              <div className="space-y-2">
+                {DEMO_ACCOUNTS.map((a) => (
+                  <button
+                    key={a.email}
+                    onClick={() => handleDemoLogin(a)}
+                    disabled={busy}
+                    className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-colors disabled:opacity-50 group"
+                  >
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-white">{a.label}</p>
+                      <p className="text-[10px] text-slate-400 font-mono">{a.email}</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="mt-8 text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono">
-              © 2026 AutoServe Precision Systems.
+            <div className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono">
+              © 2026 AutoServe Precision Systems
             </div>
           </div>
         </section>
@@ -64,35 +116,59 @@ const Login = () => {
         {/* Right Form */}
         <section className="col-span-1 lg:col-span-7 flex flex-col p-6 sm:p-8 md:p-16 lg:p-20 justify-center bg-card">
           <div className="mb-8 lg:mb-10">
-            <h2 className="text-2xl font-bold text-on-surface mb-2 tracking-tight">Welcome back</h2>
-            <p className="text-muted-foreground text-sm mb-6 lg:mb-8">Select your access level to continue</p>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 p-1.5 bg-surface-container rounded-xl border border-border/20">
-              {roles.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => setRole(r.id)}
-                  className={`flex flex-col items-center gap-2 py-3 sm:py-4 px-2 rounded-lg transition-all duration-200 ${
-                    role === r.id
-                      ? "bg-card shadow-sm border border-border text-primary"
-                      : "text-muted-foreground hover:bg-surface-container-high"
-                  }`}
-                >
-                  <r.icon className="w-5 h-5" />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.12em]">{r.label}</span>
-                </button>
-              ))}
+            <h2 className="text-2xl font-bold text-on-surface mb-2 tracking-tight">
+              {mode === "signin" ? "Welcome back" : "Create your account"}
+            </h2>
+            <p className="text-muted-foreground text-sm mb-6">
+              {mode === "signin" ? "Sign in to access your AutoServe portal" : "Join AutoServe to manage your vehicle services"}
+            </p>
+            <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-container rounded-xl border border-border/20">
+              <button
+                onClick={() => setMode("signin")}
+                className={`py-2.5 rounded-lg text-xs font-bold uppercase tracking-[0.12em] transition-all ${
+                  mode === "signin" ? "bg-card shadow-sm border border-border text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => setMode("signup")}
+                className={`py-2.5 rounded-lg text-xs font-bold uppercase tracking-[0.12em] transition-all ${
+                  mode === "signup" ? "bg-card shadow-sm border border-border text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Sign Up
+              </button>
             </div>
           </div>
 
-          <form className="space-y-5 lg:space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">Full Name</label>
+                <div className="relative">
+                  <UserCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Aarav Kapoor"
+                    className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">
-                Email Address
-              </label>
+              <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@autoserve.in"
                   className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground"
                 />
@@ -100,54 +176,62 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-end px-1">
-                <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground">
-                  Password
-                </label>
-                <button type="button" className="text-[10px] font-bold uppercase tracking-[0.15em] text-primary hover:underline">
-                  Forgot Password?
-                </button>
-              </div>
+              <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type={showPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
                   className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-11 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 py-2">
-              <input type="checkbox" id="remember" className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary/20" />
-              <label htmlFor="remember" className="text-xs text-muted-foreground font-medium select-none cursor-pointer">
-                Keep me signed in for 30 days
-              </label>
-            </div>
-
-            <div className="pt-2 lg:pt-4">
-              <button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all duration-200 active:scale-[0.98]"
-              >
-                <span className="text-sm">Sign In</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all duration-200 active:scale-[0.98]"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                <>
+                  <span className="text-sm">{mode === "signin" ? "Sign In" : "Create Account"}</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
           </form>
 
-          <div className="mt-8 lg:mt-12 pt-6 lg:pt-8 border-t border-border/10 text-center">
-            <p className="text-muted-foreground text-xs">
-              New to AutoServe?{" "}
-              <button className="text-primary font-bold hover:underline ml-1">Create an Account</button>
-            </p>
+          <div className="mt-8 lg:hidden">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-mono mb-3 text-center">Quick demo access</p>
+            <div className="space-y-2">
+              {DEMO_ACCOUNTS.map((a) => (
+                <button
+                  key={a.email}
+                  onClick={() => handleDemoLogin(a)}
+                  disabled={busy}
+                  className="w-full flex items-center justify-between bg-surface-container-low border border-border/30 rounded-lg px-4 py-3 hover:bg-surface-container transition-colors disabled:opacity-50"
+                >
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-on-surface">{a.label}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">{a.email}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-border/10 text-center">
+            <Link to="/" className="text-muted-foreground text-xs hover:text-primary transition-colors">
+              ← Back to homepage
+            </Link>
           </div>
         </section>
       </main>
