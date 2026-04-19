@@ -1,174 +1,214 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Package, AlertTriangle, Truck, DollarSign, MoreVertical, Filter, Download, Settings, Zap, Disc, Wrench, Droplets } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search, Edit2, Trash2, X, Package, AlertTriangle, IndianRupee, Truck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useLiveTable } from "@/hooks/useRealtimeQuery";
+import { formatINR } from "@/lib/format";
+import { toast } from "sonner";
 
-const tabs = ["All Inventory", "Low Stock", "Consumables", "Hardware"] as const;
+interface Item {
+  id: string; name: string; sku: string; category: string; quantity: number;
+  reorder_level: number; unit_price: number; supplier: string | null;
+}
 
-const items = [
-  { name: "Brake Pads - Ceramic XL", sku: "SKU-BRK-44901", category: "Braking System", stock: 142, max: 160, status: "Optimal", statusColor: "text-emerald-600 bg-emerald-50", icon: Settings, iconBg: "bg-primary/10", iconColor: "text-primary" },
-  { name: "Synthetic Engine Oil 5W-30", sku: "SKU-OIL-11202", category: "Lubricants", stock: 8, max: 65, status: "Critical Stock", statusColor: "text-destructive bg-destructive/10", icon: Droplets, iconBg: "bg-destructive/10", iconColor: "text-destructive", action: "Restock Now" },
-  { name: "High Performance Spark Plug", sku: "SKU-ELC-77123", category: "Electrical", stock: 14, max: 50, status: "Low Stock", statusColor: "text-amber-600 bg-amber-50", icon: Zap, iconBg: "bg-amber-50", iconColor: "text-amber-600" },
-  { name: "Michelin Pilot Sport 4S", sku: "SKU-TIR-99044", category: "Tires & Wheels", stock: 12, max: 20, status: "Healthy", statusColor: "text-primary bg-primary/10", icon: Disc, iconBg: "bg-primary/10", iconColor: "text-primary" },
-  { name: "Standard Oil Filter (Case)", sku: "SKU-FLT-33410", category: "Filters", stock: 4, max: 12, status: "In Transit", statusColor: "text-primary bg-primary/10", icon: Wrench, iconBg: "bg-primary/10", iconColor: "text-primary" },
-];
+const CATEGORIES = ["Engine", "Brakes", "Tires", "Electrical", "Filters", "Lubricants", "AC", "Body", "Other"];
+
+const empty = { name: "", sku: "", category: "Engine", quantity: 0, reorder_level: 5, unit_price: 0, supplier: "" };
 
 const ManagerInventory = () => {
-  const [activeTab, setActiveTab] = useState<typeof tabs[number]>("All Inventory");
+  const { data: items } = useLiveTable<Item>("inventory", (q) => q.order("name"));
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"all" | "low">("all");
+  const [editing, setEditing] = useState<Item | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<any>(empty);
+  const [saving, setSaving] = useState(false);
+
+  const filtered = useMemo(() => {
+    return items.filter((i) => {
+      if (tab === "low" && i.quantity > i.reorder_level) return false;
+      if (search) {
+        const hay = `${i.name} ${i.sku} ${i.category} ${i.supplier ?? ""}`.toLowerCase();
+        if (!hay.includes(search.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [items, tab, search]);
+
+  const totalValue = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+  const lowCount = items.filter((i) => i.quantity <= i.reorder_level).length;
+
+  const openCreate = () => { setEditing(null); setForm(empty); setShowForm(true); };
+  const openEdit = (i: Item) => {
+    setEditing(i);
+    setForm({ name: i.name, sku: i.sku, category: i.category, quantity: i.quantity, reorder_level: i.reorder_level, unit_price: i.unit_price, supplier: i.supplier ?? "" });
+    setShowForm(true);
+  };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const payload = {
+      name: form.name, sku: form.sku, category: form.category,
+      quantity: parseInt(form.quantity, 10) || 0,
+      reorder_level: parseInt(form.reorder_level, 10) || 0,
+      unit_price: parseFloat(form.unit_price) || 0,
+      supplier: form.supplier || null,
+    };
+    const { error } = editing
+      ? await supabase.from("inventory").update(payload).eq("id", editing.id)
+      : await supabase.from("inventory").insert(payload);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(editing ? "Updated" : "Added to inventory");
+    setShowForm(false);
+  };
+
+  const restock = async (i: Item) => {
+    const target = i.reorder_level * 4;
+    const { error } = await supabase.from("inventory").update({ quantity: target }).eq("id", i.id);
+    if (error) toast.error(error.message);
+    else toast.success(`Restocked ${i.name} to ${target}`);
+  };
+
+  const remove = async (i: Item) => {
+    if (!confirm(`Delete ${i.name}?`)) return;
+    const { error } = await supabase.from("inventory").delete().eq("id", i.id);
+    if (error) toast.error(error.message);
+    else toast.success("Deleted");
+  };
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-on-surface tracking-tight">Inventory Monitor</h1>
-          <p className="text-sm text-muted-foreground mt-1">Real-time stock management and procurement tracking.</p>
+          <p className="text-sm text-muted-foreground mt-1">Real-time parts stock, pricing, and procurement.</p>
         </div>
+        <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all self-start">
+          <Plus className="w-4 h-4" /> Add Part
+        </button>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { icon: Package, iconBg: "bg-primary/10", iconColor: "text-primary", label: "Total SKU", value: "1,284", sub: "+12 since last week", subColor: "text-emerald-600" },
-          { icon: AlertTriangle, iconBg: "bg-destructive/10", iconColor: "text-destructive", label: "Low Stock", value: "28", sub: "● Requires Immediate Action", subColor: "text-destructive", valueColor: "text-destructive" },
-          { icon: Truck, iconBg: "bg-primary/10", iconColor: "text-primary", label: "In Transit", value: "15", sub: "Expected delivery by Friday", subColor: "text-emerald-600" },
-          { icon: DollarSign, iconBg: "bg-primary/10", iconColor: "text-primary", label: "Valuation", value: "$248.5k", sub: "Inventory Asset Total", subColor: "text-muted-foreground" },
-        ].map(k => (
-          <div key={k.label} className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-            <div className="flex justify-between items-start mb-3">
-              <div className={`p-2 rounded-lg ${k.iconBg}`}><k.icon className={`w-5 h-5 ${k.iconColor}`} /></div>
-            </div>
-            <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">{k.label}</p>
-            <p className={`text-2xl lg:text-3xl font-black mt-1 ${k.valueColor || "text-on-surface"}`}>{k.value}</p>
-            <p className={`text-[10px] ${k.subColor} mt-1`}>{k.sub}</p>
-          </div>
-        ))}
+        <Kpi label="Total SKUs" value={String(items.length)} icon={Package} bg="bg-primary/10" color="text-primary" />
+        <Kpi label="Low Stock" value={String(lowCount)} icon={AlertTriangle} bg="bg-destructive/10" color="text-destructive" valueColor="text-destructive" />
+        <Kpi label="Suppliers" value={String(new Set(items.map((i) => i.supplier).filter(Boolean)).size)} icon={Truck} bg="bg-primary/10" color="text-primary" />
+        <Kpi label="Inventory Value" value={formatINR(totalValue)} icon={IndianRupee} bg="bg-emerald-50" color="text-emerald-600" mono />
       </div>
 
-      {/* Table */}
       <div className="bg-card rounded-xl border border-border/20 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 lg:p-6 border-b border-border/20 gap-4">
-          <div className="flex gap-2 overflow-x-auto">
-            {tabs.map(t => (
-              <button
-                key={t}
-                onClick={() => setActiveTab(t)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
-                  activeTab === t
-                    ? t === "Low Stock" ? "text-destructive bg-destructive/10" : "text-primary bg-primary/10"
-                    : "text-muted-foreground bg-surface-container hover:bg-surface-container-high"
-                }`}
-              >
-                {t === "Low Stock" && "● "}{t}
-              </button>
-            ))}
-          </div>
           <div className="flex gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-2 border border-border/30 rounded-lg text-xs font-medium"><Filter className="w-3.5 h-3.5" /> Filters</button>
-            <button className="flex items-center gap-1.5 px-3 py-2 border border-border/30 rounded-lg text-xs font-medium"><Download className="w-3.5 h-3.5" /> Export</button>
+            <button onClick={() => setTab("all")} className={`px-3 py-1.5 rounded-full text-xs font-bold ${tab === "all" ? "bg-on-surface text-card" : "bg-surface-container text-muted-foreground"}`}>All</button>
+            <button onClick={() => setTab("low")} className={`px-3 py-1.5 rounded-full text-xs font-bold ${tab === "low" ? "bg-destructive/10 text-destructive" : "bg-surface-container text-muted-foreground"}`}>● Low Stock</button>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
+              className="w-full pl-10 pr-3 py-2 bg-surface-container border border-border/20 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-[800px]">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/20">
-                <th className="text-left py-3 px-6 font-bold">Item Name & Reference</th>
+                <th className="text-left py-3 px-6 font-bold">Item</th>
                 <th className="text-left py-3 px-4 font-bold">Category</th>
-                <th className="text-left py-3 px-4 font-bold">Stock Level</th>
-                <th className="text-left py-3 px-4 font-bold">Status Badge</th>
+                <th className="text-left py-3 px-4 font-bold">Stock</th>
+                <th className="text-left py-3 px-4 font-bold">Unit Price</th>
+                <th className="text-left py-3 px-4 font-bold">Supplier</th>
                 <th className="text-center py-3 px-4 font-bold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/10">
-              {items.map(item => (
-                <tr key={item.sku} className="hover:bg-surface-container-low/50 transition-colors">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${item.iconBg}`}>
-                        <item.icon className={`w-5 h-5 ${item.iconColor}`} />
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="py-12 text-center text-sm text-muted-foreground">No inventory items.</td></tr>
+              )}
+              {filtered.map((i) => {
+                const isLow = i.quantity <= i.reorder_level;
+                const isCritical = i.quantity <= Math.floor(i.reorder_level / 2);
+                return (
+                  <tr key={i.id} className="hover:bg-surface-container-low/50 transition-colors">
+                    <td className="py-4 px-6">
+                      <p className="text-sm font-semibold text-on-surface">{i.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">{i.sku}</p>
+                    </td>
+                    <td className="py-4 px-4 text-sm text-muted-foreground">{i.category}</td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-sm font-bold ${isCritical ? "text-destructive" : isLow ? "text-amber-600" : "text-on-surface"}`}>{i.quantity}</span>
+                        {isLow && (
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${isCritical ? "text-destructive bg-destructive/10" : "text-amber-700 bg-amber-100"}`}>
+                            {isCritical ? "Critical" : "Low"}
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-on-surface">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">{item.sku}</p>
+                      <p className="text-[10px] text-muted-foreground">reorder at {i.reorder_level}</p>
+                    </td>
+                    <td className="py-4 px-4 text-sm font-mono text-on-surface">{formatINR(i.unit_price)}</td>
+                    <td className="py-4 px-4 text-xs text-muted-foreground">{i.supplier || "—"}</td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center justify-center gap-1">
+                        {isLow && (
+                          <button onClick={() => restock(i)} className="px-2 py-1 text-[10px] font-bold bg-primary text-primary-foreground rounded hover:bg-primary/90">Restock</button>
+                        )}
+                        <button onClick={() => openEdit(i)} className="p-1.5 hover:bg-surface-container rounded text-muted-foreground hover:text-on-surface"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => remove(i)} className="p-1.5 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-muted-foreground">{item.category}</td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${item.stock / item.max > 0.5 ? "bg-primary" : item.stock / item.max > 0.2 ? "bg-amber-500" : "bg-destructive"}`}
-                          style={{ width: `${(item.stock / item.max) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{item.stock} / {item.max} units</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${item.statusColor}`}>{item.status}</span>
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    {item.action ? (
-                      <button className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1.5 rounded-lg">{item.action}</button>
-                    ) : (
-                      <button className="p-1 hover:bg-surface-container rounded"><MoreVertical className="w-4 h-4 text-muted-foreground" /></button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between p-4 lg:p-6 border-t border-border/20">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Showing 1-10 of 1,284 SKU</p>
-          <div className="flex gap-1">
-            <button className="px-2 py-1 text-xs text-muted-foreground hover:bg-surface-container rounded">‹</button>
-            <button className="px-3 py-1 text-xs font-bold bg-primary text-primary-foreground rounded">1</button>
-            <button className="px-3 py-1 text-xs text-muted-foreground hover:bg-surface-container rounded">2</button>
-            <button className="px-3 py-1 text-xs text-muted-foreground hover:bg-surface-container rounded">3</button>
-            <button className="px-2 py-1 text-xs text-muted-foreground hover:bg-surface-container rounded">›</button>
-          </div>
-        </div>
       </div>
 
-      {/* Bottom section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card p-6 rounded-xl border border-border/20 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-on-surface">Usage Velocity</h3>
-            <div className="flex gap-3 text-[10px] font-bold uppercase tracking-wider">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> This Month</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-surface-container-high" /> Prev. Month</span>
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setShowForm(false)}>
+          <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-on-surface">{editing ? "Edit Part" : "Add Part"}</h3>
+              <button onClick={() => setShowForm(false)} className="p-1 hover:bg-surface-container rounded"><X className="w-4 h-4" /></button>
             </div>
-          </div>
-          <div className="flex items-end gap-3 h-40">
-            {[35,55,40,65,80,70,85].map((h, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full bg-primary rounded-t" style={{ height: `${h}%` }} />
-                <span className="text-[9px] text-muted-foreground font-mono">Oct {String(i * 7 + 1).padStart(2, '0')}</span>
+            <form onSubmit={save} className="space-y-4">
+              <Field label="Name"><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full p-2.5 text-sm bg-surface-container-low border border-border/20 rounded-lg outline-none focus:ring-2 focus:ring-primary/20" /></Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="SKU"><input required value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className="w-full p-2.5 text-sm bg-surface-container-low border border-border/20 rounded-lg outline-none focus:ring-2 focus:ring-primary/20" /></Field>
+                <Field label="Category"><select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full p-2.5 text-sm bg-surface-container-low border border-border/20 rounded-lg outline-none">{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
               </div>
-            ))}
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Quantity"><input type="number" min={0} required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="w-full p-2.5 text-sm bg-surface-container-low border border-border/20 rounded-lg outline-none focus:ring-2 focus:ring-primary/20" /></Field>
+                <Field label="Reorder Level"><input type="number" min={0} required value={form.reorder_level} onChange={(e) => setForm({ ...form, reorder_level: e.target.value })} className="w-full p-2.5 text-sm bg-surface-container-low border border-border/20 rounded-lg outline-none focus:ring-2 focus:ring-primary/20" /></Field>
+              </div>
+              <Field label="Unit Price (₹)"><input type="number" step="0.01" min={0} required value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} className="w-full p-2.5 text-sm bg-surface-container-low border border-border/20 rounded-lg outline-none focus:ring-2 focus:ring-primary/20" /></Field>
+              <Field label="Supplier"><input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} placeholder="optional" className="w-full p-2.5 text-sm bg-surface-container-low border border-border/20 rounded-lg outline-none focus:ring-2 focus:ring-primary/20" /></Field>
+              <button type="submit" disabled={saving} className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
+                {saving ? "Saving…" : editing ? "Save Changes" : "Add Part"}
+              </button>
+            </form>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-xl">
-          <h3 className="font-bold mb-2">Automated Ordering</h3>
-          <p className="text-sm text-slate-400 mb-4">AI Assistant has identified 4 critical parts that require replenishment based on current work order volume.</p>
-          <div className="space-y-2 mb-4">
-            <div className="flex justify-between items-center bg-white/5 border border-white/10 rounded-lg px-3 py-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Brake Fluid DOT 4</span>
-              <span className="text-xs font-medium">12 Units</span>
-            </div>
-            <div className="flex justify-between items-center bg-white/5 border border-white/10 rounded-lg px-3 py-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Radiator Coolant</span>
-              <span className="text-xs font-medium">5 Units</span>
-            </div>
-          </div>
-          <button className="w-full py-2.5 bg-white/10 border border-white/20 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors">
-            Approve Order $420.50
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
+
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <label className="block">
+    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold block mb-1.5">{label}</span>
+    {children}
+  </label>
+);
+
+const Kpi = ({ label, value, icon: Icon, bg, color, valueColor, mono }: { label: string; value: string; icon: any; bg: string; color: string; valueColor?: string; mono?: boolean }) => (
+  <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
+    <div className="flex justify-between items-start mb-3">
+      <div className={`p-2 rounded-lg ${bg}`}><Icon className={`w-5 h-5 ${color}`} /></div>
+    </div>
+    <p className="text-muted-foreground text-[10px] uppercase tracking-[0.15em] font-bold">{label}</p>
+    <p className={`text-2xl lg:text-3xl font-black mt-1 ${valueColor || "text-on-surface"} ${mono ? "font-mono" : ""}`}>{value}</p>
+  </div>
+);
 
 export default ManagerInventory;
