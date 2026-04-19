@@ -63,20 +63,27 @@ const EmployeeJobDetail = () => {
   const updateStatus = async (newStatus: string) => {
     if (!booking) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: newStatus as any, notes })
-      .eq("id", booking.id);
+    const patch: any = { status: newStatus, notes };
+    if (newStatus === "ready_for_pickup") patch.ready_for_pickup = true;
+    const { error } = await supabase.from("bookings").update(patch).eq("id", booking.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`Status → ${newStatus.replace("_", " ")}`);
+    toast.success(`Status → ${newStatus.replace(/_/g, " ")}`);
+    if (navigator.vibrate) navigator.vibrate(50);
 
     // Notify customer
+    let title = "Service Update";
+    let message = `Your ${service?.name || "service"} is now ${newStatus.replace(/_/g, " ")}.`;
+    if (newStatus === "ready_for_pickup") {
+      title = "Vehicle Ready for Pickup";
+      message = `Your ${service?.name || "service"} is complete. Open My Bookings to get your collection QR.`;
+      // Auto-issue check-out QR for the customer
+      await issueHandoverToken(booking.id, booking.customer_id, "check_out");
+    }
     await supabase.from("notifications").insert({
       user_id: booking.customer_id,
-      title: "Service Update",
-      message: `Your ${service?.name || "service"} is now ${newStatus.replace("_", " ")}.`,
-      type: newStatus === "completed" ? "success" : "info",
+      title, message,
+      type: newStatus === "completed" || newStatus === "ready_for_pickup" ? "success" : "info",
     });
 
     // If completed → write service_history record
