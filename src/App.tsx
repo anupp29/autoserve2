@@ -23,6 +23,7 @@ import EmployeeJobDetail from "./pages/employee/JobDetail";
 import EmployeeServiceQueue from "./pages/employee/ServiceQueue";
 import EmployeeInventoryCheck from "./pages/employee/InventoryCheck";
 import EmployeePerformance from "./pages/employee/Performance";
+import StaffScan from "./pages/staff/Scan";
 
 import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerVehicles from "./pages/customer/MyVehicles";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/manager/employees" element={<ManagerEmployees />} />
               <Route path="/manager/customers" element={<ManagerCustomers />} />
               <Route path="/manager/reports" element={<ManagerReports />} />
+              <Route path="/manager/scan" element={<StaffScan />} />
             </Route>
 
             {/* Employee Routes */}
@@ -69,6 +71,7 @@ const App = () => (
               <Route path="/employee/inventory" element={<EmployeeInventoryCheck />} />
               <Route path="/employee/performance" element={<EmployeePerformance />} />
               <Route path="/employee/job/:id" element={<EmployeeJobDetail />} />
+              <Route path="/employee/scan" element={<StaffScan />} />
             </Route>
 
             {/* Customer Routes */}

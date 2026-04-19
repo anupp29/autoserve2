@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Wrench, Package, Users, UserCog, BarChart3,
   LogOut, ClipboardList, Car, Calendar, History,
-  X, Bot, DollarSign,
+  X, Bot, DollarSign, ScanLine, Sparkles,
 } from "lucide-react";
 import AutoServeLogo from "@/components/AutoServeLogo";
 import type { UserRole } from "./RoleLayout";
@@ -19,6 +19,7 @@ interface NavItem {
 
 const managerNav: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/manager/dashboard" },
+  { label: "Scan Handover", icon: ScanLine, path: "/manager/scan" },
   { label: "Bookings", icon: ClipboardList, path: "/manager/bookings" },
   { label: "Service History", icon: History, path: "/manager/history" },
   { label: "Services", icon: Wrench, path: "/manager/services" },
@@ -30,6 +31,7 @@ const managerNav: NavItem[] = [
 
 const employeeNav: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/employee/dashboard" },
+  { label: "Scan Handover", icon: ScanLine, path: "/employee/scan" },
   { label: "Service Queue", icon: Wrench, path: "/employee/queue" },
   { label: "Inventory", icon: Package, path: "/employee/inventory" },
   { label: "Performance", icon: BarChart3, path: "/employee/performance" },
@@ -42,7 +44,8 @@ const customerNav: NavItem[] = [
   { label: "My Bookings", icon: ClipboardList, path: "/customer/bookings" },
   { label: "Service History", icon: History, path: "/customer/history" },
   { label: "AI Diagnostics", icon: Bot, path: "/customer/diagnostics" },
-  { label: "Valuation", icon: DollarSign, path: "/customer/valuation" },
+  { label: "AI Assistant", icon: Sparkles, path: "/customer/assistant" },
+  { label: "Resale Value", icon: DollarSign, path: "/customer/valuation" },
 ];
 
 const navMap: Record<UserRole, NavItem[]> = {
