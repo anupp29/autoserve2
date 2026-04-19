@@ -97,10 +97,20 @@ async function seedCustomerData(customerId: string, employeeId: string) {
     { owner_id: customerId, make: "Mahindra", model: "XUV700 AX7", year: 2024, registration: "HR 26 CD 5678", color: "Napoli Black", mileage: 8900, fuel_type: "Diesel" },
   ];
 
+  // Clear existing vehicles for this customer first to ensure clean state
+  await admin.from("bookings").delete().eq("customer_id", customerId);
+  await admin.from("service_history").delete().eq("customer_id", customerId);
+  await admin.from("vehicles").delete().eq("owner_id", customerId);
+
   const vehIds: string[] = [];
   for (const v of vehicles) {
-    const { data } = await admin.from("vehicles").upsert(v, { onConflict: "registration" }).select("id").single();
+    const { data, error } = await admin.from("vehicles").insert(v).select("id").single();
+    if (error) { console.error("vehicle insert error", error); continue; }
     if (data) vehIds.push(data.id);
+  }
+  if (vehIds.length === 0) {
+    console.error("No vehicles created, aborting customer seed");
+    return;
   }
 
   // Get service ids
