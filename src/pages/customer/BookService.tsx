@@ -83,6 +83,55 @@ const BookService = () => {
   }
 
   return (
+    <>
+    {/* Booking Confirmation Modal with QR */}
+    {confirmedBooking && svc && veh && (
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+        <div className="bg-card max-w-md w-full rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 text-white text-center relative">
+            <button onClick={() => navigate("/customer/bookings")} className="absolute top-3 right-3 p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+            <div className="w-14 h-14 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold">Booking Confirmed!</h3>
+            <p className="text-sm text-emerald-50 mt-1">Reference: <span className="font-mono font-bold">#{confirmedBooking.ref}</span></p>
+          </div>
+          <div className="p-6 text-center space-y-4">
+            <div className="bg-surface-container-low p-4 rounded-xl border border-border/20 inline-block">
+              <QRCodeSVG
+                value={JSON.stringify({
+                  booking_id: confirmedBooking.id,
+                  ref: confirmedBooking.ref,
+                  customer: user?.email,
+                  vehicle: `${veh.year} ${veh.make} ${veh.model}`,
+                  registration: veh.registration,
+                  service: svc.name,
+                  scheduled: `${date} ${time}`,
+                  amount: svc.price,
+                })}
+                size={180}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Show this QR at the AutoServe counter</p>
+              <p className="text-sm text-on-surface font-semibold mt-1">{svc.name} · {formatINR(svc.price)}</p>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1.5">
+                <CalIcon className="w-3 h-3" /> {date} at {time}
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => { setConfirmedBooking(null); setStep(0); setSelectedService(null); setNotes(""); }} className="flex-1 px-4 py-2.5 border border-border/30 rounded-lg text-sm font-bold hover:bg-surface-container transition-colors">Book Another</button>
+              <button onClick={() => navigate("/customer/bookings")} className="flex-1 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all">View Bookings</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-on-surface tracking-tight">Book Service</h1>
