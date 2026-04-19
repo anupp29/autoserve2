@@ -17,7 +17,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Redirect after login
   useEffect(() => {
     if (!loading && user && role) {
       const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
@@ -32,19 +31,13 @@ const Login = () => {
     try {
       if (mode === "signin") {
         const { error } = await signIn(email, password);
-        if (error) {
-          toast.error(error.includes("Invalid login") ? "Invalid email or password" : error);
-        } else {
-          toast.success("Welcome back!");
-        }
+        if (error) toast.error(error.includes("Invalid login") ? "Invalid email or password" : error);
+        else toast.success("Welcome back!");
       } else {
         if (!fullName.trim()) { toast.error("Please enter your full name"); setBusy(false); return; }
         const { error } = await signUp(email, password, fullName);
-        if (error) {
-          toast.error(error.includes("already") ? "An account with this email already exists" : error);
-        } else {
-          toast.success("Account created! Signing you in...");
-        }
+        if (error) toast.error(error.includes("already") ? "An account with this email already exists" : error);
+        else toast.success("Account created! Signing you in...");
       }
     } finally {
       setBusy(false);
@@ -92,22 +85,8 @@ const Login = () => {
               {mode === "signin" ? "Sign in to access your AutoServe portal" : "Join AutoServe to manage your vehicle services"}
             </p>
             <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-container rounded-xl border border-border/20">
-              <button
-                onClick={() => setMode("signin")}
-                className={`py-2.5 rounded-lg text-xs font-bold uppercase tracking-[0.12em] transition-all ${
-                  mode === "signin" ? "bg-card shadow-sm border border-border text-primary" : "text-muted-foreground"
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => setMode("signup")}
-                className={`py-2.5 rounded-lg text-xs font-bold uppercase tracking-[0.12em] transition-all ${
-                  mode === "signup" ? "bg-card shadow-sm border border-border text-primary" : "text-muted-foreground"
-                }`}
-              >
-                Sign Up
-              </button>
+              <button onClick={() => setMode("signin")} className={`py-2.5 rounded-lg text-xs font-bold uppercase tracking-[0.12em] transition-all ${mode === "signin" ? "bg-card shadow-sm border border-border text-primary" : "text-muted-foreground"}`}>Sign In</button>
+              <button onClick={() => setMode("signup")} className={`py-2.5 rounded-lg text-xs font-bold uppercase tracking-[0.12em] transition-all ${mode === "signup" ? "bg-card shadow-sm border border-border text-primary" : "text-muted-foreground"}`}>Sign Up</button>
             </div>
           </div>
 
@@ -117,14 +96,7 @@ const Login = () => {
                 <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">Full Name</label>
                 <div className="relative">
                   <UserCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Aarav Kapoor"
-                    className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground"
-                  />
+                  <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Aarav Kapoor" className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground" />
                 </div>
               </div>
             )}
@@ -133,14 +105,7 @@ const Login = () => {
               <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@autoserve.in"
-                  className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground"
-                />
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@autoserve.in" className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground" />
               </div>
             </div>
 
@@ -148,26 +113,14 @@ const Login = () => {
               <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground px-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-11 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground"
-                />
+                <input type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••••••" className="w-full bg-surface-container-low border border-border/30 rounded-xl py-3.5 pl-11 pr-11 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder:text-muted-foreground" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all duration-200 active:scale-[0.98]"
-            >
+            <button type="submit" disabled={busy} className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all duration-200 active:scale-[0.98]">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                 <>
                   <span className="text-sm">{mode === "signin" ? "Sign In" : "Create Account"}</span>
@@ -176,26 +129,6 @@ const Login = () => {
               )}
             </button>
           </form>
-
-          <div className="mt-8 lg:hidden">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-mono mb-3 text-center">Quick demo access</p>
-            <div className="space-y-2">
-              {DEMO_ACCOUNTS.map((a) => (
-                <button
-                  key={a.email}
-                  onClick={() => handleDemoLogin(a)}
-                  disabled={busy}
-                  className="w-full flex items-center justify-between bg-surface-container-low border border-border/30 rounded-lg px-4 py-3 hover:bg-surface-container transition-colors disabled:opacity-50"
-                >
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-on-surface">{a.label}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono">{a.email}</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="mt-8 pt-6 border-t border-border/10 text-center">
             <Link to="/" className="text-muted-foreground text-xs hover:text-primary transition-colors">
@@ -207,5 +140,12 @@ const Login = () => {
     </div>
   );
 };
+
+const Feature = ({ icon: Icon, label }: { icon: any; label: string }) => (
+  <div className="flex flex-col items-center gap-1.5 p-3 bg-white/5 border border-white/10 rounded-lg">
+    <Icon className="w-4 h-4 text-primary" />
+    <span className="text-[10px] uppercase tracking-wider text-slate-300 font-bold">{label}</span>
+  </div>
+);
 
 export default Login;
