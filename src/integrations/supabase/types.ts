@@ -17,11 +17,14 @@ export type Database = {
       bookings: {
         Row: {
           assigned_to: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
           created_at: string
           customer_id: string
           id: string
           notes: string | null
           priority: Database["public"]["Enums"]["booking_priority"]
+          ready_for_pickup: boolean
           scheduled_at: string
           service_id: string
           status: Database["public"]["Enums"]["booking_status"]
@@ -31,11 +34,14 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
           created_at?: string
           customer_id: string
           id?: string
           notes?: string | null
           priority?: Database["public"]["Enums"]["booking_priority"]
+          ready_for_pickup?: boolean
           scheduled_at: string
           service_id: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -45,11 +51,14 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
           created_at?: string
           customer_id?: string
           id?: string
           notes?: string | null
           priority?: Database["public"]["Enums"]["booking_priority"]
+          ready_for_pickup?: boolean
           scheduled_at?: string
           service_id?: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -73,6 +82,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      handover_tokens: {
+        Row: {
+          booking_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          issued_to: string
+          kind: string
+          scanned_at: string | null
+          scanned_by: string | null
+          token: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_to: string
+          kind: string
+          scanned_at?: string | null
+          scanned_by?: string | null
+          token: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_to?: string
+          kind?: string
+          scanned_at?: string | null
+          scanned_by?: string | null
+          token?: string
+        }
+        Relationships: []
       }
       inventory: {
         Row: {
@@ -365,6 +410,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+        | "ready_for_pickup"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -500,6 +546,7 @@ export const Constants = {
         "in_progress",
         "completed",
         "cancelled",
+        "ready_for_pickup",
       ],
     },
   },
