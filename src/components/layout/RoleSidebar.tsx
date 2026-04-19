@@ -9,6 +9,8 @@ import type { UserRole } from "./RoleLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
+// signOut handled inside component below
+
 interface NavItem {
   label: string;
   icon: React.ElementType;
@@ -62,7 +64,15 @@ interface RoleSidebarProps {
 
 const RoleSidebar = ({ role, onClose }: RoleSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const navItems = navMap[role];
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success("Signed out");
+    navigate("/login", { replace: true });
+  };
 
   return (
     <aside className="h-screen w-64 border-r border-border/50 bg-surface-container-low flex flex-col py-4">
@@ -98,13 +108,13 @@ const RoleSidebar = ({ role, onClose }: RoleSidebarProps) => {
 
       {/* Bottom Actions */}
       <div className="px-4 mt-auto pt-4 border-t border-border/50 space-y-2">
-        <Link
-          to="/login"
-          className="flex items-center gap-3 px-3 py-2 text-destructive hover:opacity-80 text-[12px] font-medium transition-opacity"
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 text-destructive hover:opacity-80 text-[12px] font-medium transition-opacity"
         >
           <LogOut className="w-4 h-4" />
           <span>Log Out</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );
