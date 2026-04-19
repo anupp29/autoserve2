@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Car, Clock, Loader2, AlertCircle, Wrench, X, Calendar as CalIcon } from "lucide-react";
+import { CheckCircle, Car, Clock, Loader2, AlertCircle, Wrench, X, Calendar as CalIcon, ScanLine } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/format";
+import BrandLogo from "@/components/BrandLogo";
+import { issueHandoverToken } from "@/lib/handover";
 
 interface Service { id: string; name: string; description: string | null; category: string; price: number; duration_minutes: number; }
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; }
@@ -32,7 +34,7 @@ const BookService = () => {
   const [priority, setPriority] = useState<"normal" | "express" | "priority">("normal");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; ref: string } | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; ref: string; qrPayload: string; token: string } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -63,10 +65,16 @@ const BookService = () => {
       notes: notes || null,
       total_cost: svc?.price ?? null,
     }).select("id").single();
+    if (error || !data) { setBusy(false); toast.error(error?.message ?? "Could not create booking"); return; }
+
+    // Issue a check-in QR token immediately so the customer can show it on arrival.
+    const tok = await issueHandoverToken(data.id, user.id, "check_in");
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (tok.error) { toast.error("Booking created, but QR generation failed: " + tok.error); return; }
+
+    if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
     toast.success("Booking confirmed!");
-    setConfirmedBooking({ id: data.id, ref: data.id.slice(0, 8).toUpperCase() });
+    setConfirmedBooking({ id: data.id, ref: data.id.slice(0, 8).toUpperCase(), qrPayload: tok.payload, token: tok.token });
   };
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -87,7 +95,7 @@ const BookService = () => {
     {/* Booking Confirmation Modal with QR */}
     {confirmedBooking && svc && veh && (
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-        <div className="bg-card max-w-md w-full rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-card max-w-md w-full rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] overflow-y-auto">
           <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 text-white text-center relative">
             <button onClick={() => navigate("/customer/bookings")} className="absolute top-3 right-3 p-1.5 hover:bg-white/20 rounded-lg transition-colors">
               <X className="w-4 h-4" />
@@ -99,26 +107,28 @@ const BookService = () => {
             <p className="text-sm text-emerald-50 mt-1">Reference: <span className="font-mono font-bold">#{confirmedBooking.ref}</span></p>
           </div>
           <div className="p-6 text-center space-y-4">
-            <div className="bg-surface-container-low p-4 rounded-xl border border-border/20 inline-block">
+            <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-wider font-bold text-primary">
+              <ScanLine className="w-3.5 h-3.5" /> Vehicle Check-In QR
+            </div>
+            <div className="bg-white p-4 rounded-xl border-2 border-primary/30 inline-block shadow-md">
               <QRCodeSVG
-                value={JSON.stringify({
-                  booking_id: confirmedBooking.id,
-                  ref: confirmedBooking.ref,
-                  customer: user?.email,
-                  vehicle: `${veh.year} ${veh.make} ${veh.model}`,
-                  registration: veh.registration,
-                  service: svc.name,
-                  scheduled: `${date} ${time}`,
-                  amount: svc.price,
-                })}
-                size={180}
+                value={confirmedBooking.qrPayload}
+                size={200}
                 level="M"
                 includeMargin={false}
               />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Show this QR at the AutoServe counter</p>
-              <p className="text-sm text-on-surface font-semibold mt-1">{svc.name} · {formatINR(svc.price)}</p>
+            <div className="text-[10px] font-mono text-muted-foreground tracking-wider break-all px-4">
+              {confirmedBooking.token}
+            </div>
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-left">
+              <p className="text-xs font-bold text-on-surface mb-1">Show this QR at the AutoServe counter</p>
+              <p className="text-[11px] text-muted-foreground">The technician scans it to lock your vehicle into the service bay. You can re-open this QR anytime from <strong>My Bookings</strong>.</p>
+            </div>
+            <div className="border-t border-border/10 pt-3">
+              <p className="text-sm text-on-surface font-semibold flex items-center justify-center gap-2">
+                <BrandLogo make={veh.make} size={20} /> {svc.name} · {formatINR(svc.price)}
+              </p>
               <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1.5">
                 <CalIcon className="w-3 h-3" /> {date} at {time}
               </p>
