@@ -13,6 +13,7 @@ interface BookingMatch {
   customer_id: string;
   vehicle_id: string;
   service_id: string;
+  assigned_to: string | null;
   dropoff_code: string | null;
   pickup_code: string | null;
 }
