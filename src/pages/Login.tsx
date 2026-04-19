@@ -1,15 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, User, UserCircle2, Loader2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, UserCircle2, Loader2, ShieldCheck, Wrench, Activity } from "lucide-react";
 import AutoServeLogo from "@/components/AutoServeLogo";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-
-const DEMO_ACCOUNTS = [
-  { label: "Manager", email: "manager@autoserve.in", password: "autoserve123" },
-  { label: "Technician", email: "tech@autoserve.in", password: "autoserve123" },
-  { label: "Customer", email: "customer@autoserve.in", password: "autoserve123" },
-];
 
 const Login = () => {
   const navigate = useNavigate();
@@ -57,17 +51,6 @@ const Login = () => {
     }
   };
 
-  const handleDemoLogin = async (acc: typeof DEMO_ACCOUNTS[number]) => {
-    setEmail(acc.email);
-    setPassword(acc.password);
-    setMode("signin");
-    setBusy(true);
-    const { error } = await signIn(acc.email, acc.password);
-    if (error) toast.error(error);
-    else toast.success(`Signed in as ${acc.label}`);
-    setBusy(false);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center industrial-mesh p-4">
       <main className="w-full max-w-[1200px] grid grid-cols-1 lg:grid-cols-12 bg-card shadow-lg rounded-xl overflow-hidden min-h-[600px] lg:min-h-[700px]">
@@ -88,24 +71,10 @@ const Login = () => {
             </p>
           </div>
           <div className="relative z-10 space-y-6">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono mb-3">Quick demo access</p>
-              <div className="space-y-2">
-                {DEMO_ACCOUNTS.map((a) => (
-                  <button
-                    key={a.email}
-                    onClick={() => handleDemoLogin(a)}
-                    disabled={busy}
-                    className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-colors disabled:opacity-50 group"
-                  >
-                    <div className="text-left">
-                      <p className="text-xs font-bold text-white">{a.label}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">{a.email}</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Feature icon={ShieldCheck} label="Secure" />
+              <Feature icon={Wrench} label="Real-time" />
+              <Feature icon={Activity} label="AI-powered" />
             </div>
             <div className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-mono">
               © 2026 AutoServe Precision Systems
