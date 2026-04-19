@@ -1,132 +1,173 @@
-import { Link } from "react-router-dom";
-import { AlertTriangle, Clock, CheckCircle, Wrench, Car, Shield, Activity } from "lucide-react";
+import { useState } from "react";
+import { Plus, Car, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useLiveTable } from "@/hooks/useRealtimeQuery";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-const CustomerVehicles = () => (
-  <div className="space-y-8">
-    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-      <span>Customer</span><span>›</span><span className="text-primary font-semibold">Garage</span>
-    </div>
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-bold text-on-surface tracking-tight">My Vehicles</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your fleet and real-time health monitoring.</p>
+interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  year: number;
+  registration: string;
+  mileage: number;
+  color: string | null;
+  fuel_type: string | null;
+}
+
+const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid"];
+const POPULAR_MAKES = ["Maruti Suzuki", "Tata", "Mahindra", "Hyundai", "Honda", "Toyota", "Kia", "MG", "Renault", "Volkswagen", "Skoda", "BMW", "Mercedes-Benz", "Audi"];
+
+const empty = { make: "Maruti Suzuki", model: "", year: new Date().getFullYear(), registration: "", color: "", fuel_type: "Petrol", mileage: 0 };
+
+const CustomerVehicles = () => {
+  const { user } = useAuth();
+  const { data: vehicles, loading } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? "").order("created_at", { ascending: false }), [user?.id], { enabled: !!user });
+
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Vehicle | null>(null);
+  const [form, setForm] = useState(empty);
+  const [busy, setBusy] = useState(false);
+
+  const openAdd = () => { setEditing(null); setForm(empty); setOpen(true); };
+  const openEdit = (v: Vehicle) => {
+    setEditing(v);
+    setForm({ make: v.make, model: v.model, year: v.year, registration: v.registration, color: v.color ?? "", fuel_type: v.fuel_type ?? "Petrol", mileage: v.mileage });
+    setOpen(true);
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setBusy(true);
+    const payload = { ...form, owner_id: user.id };
+    const res = editing
+      ? await supabase.from("vehicles").update(payload).eq("id", editing.id)
+      : await supabase.from("vehicles").insert(payload);
+    setBusy(false);
+    if (res.error) { toast.error(res.error.message); return; }
+    toast.success(editing ? "Vehicle updated" : "Vehicle added");
+    setOpen(false);
+  };
+
+  const remove = async (v: Vehicle) => {
+    if (!confirm(`Remove ${v.make} ${v.model}? This will also remove related bookings and history.`)) return;
+    const { error } = await supabase.from("vehicles").delete().eq("id", v.id);
+    if (error) toast.error(error.message); else toast.success("Vehicle removed");
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-on-surface tracking-tight">My Vehicles</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage your garage and registered vehicles.</p>
+        </div>
+        <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-[0.98] transition-all self-start">
+          <Plus className="w-4 h-4" /> Add Vehicle
+        </button>
       </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+      ) : vehicles.length === 0 ? (
+        <div className="text-center py-16 border-2 border-dashed border-border/30 rounded-xl">
+          <Car className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+          <h3 className="font-bold text-on-surface">No vehicles yet</h3>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">Add your first vehicle to start booking services.</p>
+          <button onClick={openAdd} className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold">
+            <Plus className="w-4 h-4" /> Add Vehicle
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {vehicles.map((v) => (
+            <div key={v.id} className="bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden hover:shadow-md transition-all">
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2.5 bg-primary/10 rounded-lg"><Car className="w-5 h-5 text-primary" /></div>
+                  <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-emerald-50 text-emerald-600">Active</span>
+                </div>
+                <h3 className="font-bold text-on-surface">{v.year} {v.make} {v.model}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{v.color || "—"} • {v.fuel_type}</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-xs font-mono bg-surface-container px-2 py-1 rounded">{v.registration}</span>
+                  <span className="text-xs font-mono text-muted-foreground">{v.mileage.toLocaleString("en-IN")} km</span>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button onClick={() => openEdit(v)} className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-border/30 rounded-lg text-xs font-bold hover:bg-surface-container active:scale-[0.98] transition-all">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button onClick={() => remove(v)} className="px-3 py-2 border border-destructive/30 rounded-lg text-destructive hover:bg-destructive/5 active:scale-[0.98] transition-all">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
+          <div className="bg-card rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-on-surface">{editing ? "Edit Vehicle" : "Add New Vehicle"}</h3>
+              <button onClick={() => setOpen(false)} className="p-1 hover:bg-surface-container rounded"><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={submit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">Make</label>
+                  <select value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} className="w-full bg-surface-container-low border border-border/30 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                    {POPULAR_MAKES.map((m) => <option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">Model</label>
+                  <input required value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="Swift VXi" className="w-full bg-surface-container-low border border-border/30 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">Year</label>
+                  <input required type="number" min={1990} max={2030} value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-border/30 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">Mileage (km)</label>
+                  <input required type="number" min={0} value={form.mileage} onChange={(e) => setForm({ ...form, mileage: parseInt(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-border/30 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">Registration</label>
+                <input required value={form.registration} onChange={(e) => setForm({ ...form, registration: e.target.value.toUpperCase() })} placeholder="HR 26 BX 1234" className="w-full bg-surface-container-low border border-border/30 rounded-lg py-2 px-3 text-sm font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">Color</label>
+                  <input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} placeholder="Pearl White" className="w-full bg-surface-container-low border border-border/30 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">Fuel</label>
+                  <select value={form.fuel_type} onChange={(e) => setForm({ ...form, fuel_type: e.target.value })} className="w-full bg-surface-container-low border border-border/30 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                    {FUEL_TYPES.map((f) => <option key={f}>{f}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setOpen(false)} className="flex-1 py-2.5 border border-border/30 rounded-lg text-sm font-bold hover:bg-surface-container active:scale-[0.98] transition-all">Cancel</button>
+                <button type="submit" disabled={busy} className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                  {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {editing ? "Save changes" : "Add vehicle"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
-
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 grid sm:grid-cols-2 gap-4">
-        {/* Maruti Swift */}
-        <div className="bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
-          <div className="relative h-48 bg-surface-container overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=600&h=400&fit=crop"
-              alt="Maruti Suzuki Swift"
-              className="w-full h-full object-cover"
-            />
-            <span className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded bg-emerald-50 text-emerald-600 uppercase tracking-wider">Active</span>
-          </div>
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-bold text-on-surface">Maruti Suzuki Swift</h3>
-              <span className="text-lg font-light text-muted-foreground">2023</span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4 font-mono">VIN: MA3FJEB1...</p>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
-                <Car className="w-3.5 h-3.5" /> DL-4C-AB-1234
-              </span>
-              <Link to="/customer/history" className="text-xs font-bold text-primary uppercase tracking-wider hover:underline">View Details</Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Hyundai Creta */}
-        <div className="bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
-          <div className="relative h-48 bg-surface-container overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=600&h=400&fit=crop"
-              alt="Hyundai Creta"
-              className="w-full h-full object-cover"
-            />
-            <span className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded bg-amber-50 text-amber-600 uppercase tracking-wider">Service Due</span>
-          </div>
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-bold text-on-surface">Hyundai Creta SX(O)</h3>
-              <span className="text-lg font-light text-muted-foreground">2021</span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4 font-mono">VIN: MALC381C...</p>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
-                <Car className="w-3.5 h-3.5" /> HR-26-DK-5678
-              </span>
-              <Link to="/customer/history" className="text-xs font-bold text-primary uppercase tracking-wider hover:underline">View Details</Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Maintenance Tips */}
-      <div className="space-y-4">
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 rounded-xl">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 bg-primary/20 rounded-lg"><Activity className="w-4 h-4 text-primary" /></div>
-            <h4 className="font-bold text-sm">AI Maintenance Tips</h4>
-          </div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Updated 5m ago</p>
-          <div className="space-y-3">
-            <div className="border border-destructive/30 bg-destructive/5 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-destructive">Critical Action</span>
-                <AlertTriangle className="w-4 h-4 text-destructive" />
-              </div>
-              <h5 className="text-sm font-bold text-white">Brake Wear Detected (Creta)</h5>
-              <p className="text-xs text-slate-400 mt-1">Front-left pad sensor reports 2mm remaining. Schedule replacement immediately.</p>
-              <Link to="/customer/book" className="mt-2 w-full py-1.5 bg-destructive text-white rounded text-xs font-bold block text-center">Schedule Now</Link>
-            </div>
-            <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Attention</span>
-                <Clock className="w-4 h-4 text-amber-400" />
-              </div>
-              <h5 className="text-sm font-bold text-white">Tyre Pressure Low (Swift)</h5>
-              <p className="text-xs text-slate-400 mt-1">Rear tyres at 26 PSI. Recommended: 32 PSI for optimal grip.</p>
-            </div>
-            <div className="border border-emerald-500/30 bg-emerald-500/5 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">All Clear</span>
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-              </div>
-              <h5 className="text-sm font-bold text-white">Engine Health (Swift)</h5>
-              <p className="text-xs text-slate-400 mt-1">Operating at 99% efficiency. No action needed for next 5,000 km.</p>
-            </div>
-          </div>
-          <div className="mt-4 bg-primary/20 border border-primary/30 rounded-lg p-3 flex items-center gap-3">
-            <Shield className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-sm font-bold">Smart Diagnostics</p>
-              <p className="text-xs text-slate-400">Full telemetry syncing active.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card p-5 rounded-xl border border-border/20 shadow-sm">
-          <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-3">Garage Overview</h4>
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Fleet Value</span><span className="font-bold text-on-surface font-mono">₹28,50,000</span></div>
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Annual Maintenance</span><span className="font-bold text-on-surface font-mono">₹45,000</span></div>
-            <div className="flex justify-between text-sm items-center">
-              <span className="text-muted-foreground">Health Index</span>
-              <div className="flex items-center gap-2">
-                <div className="w-16 h-1.5 bg-surface-container-high rounded-full"><div className="h-full w-[92%] bg-primary rounded-full" /></div>
-                <span className="text-xs font-bold text-primary">92%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 export default CustomerVehicles;
