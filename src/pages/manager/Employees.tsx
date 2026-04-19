@@ -1,7 +1,10 @@
-import { Users, UserCog, CheckCircle, Clock } from "lucide-react";
+// Manager view of all staff. Adds an "Add Employee" button that creates auth accounts via edge function.
+import { useState } from "react";
+import { Users, UserCog, CheckCircle, Clock, UserPlus } from "lucide-react";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
 import { formatINR, initials } from "@/lib/format";
+import AddEmployeeDialog from "@/components/AddEmployeeDialog";
 
 interface Booking { id: string; assigned_to: string | null; status: string; }
 interface History { id: string; technician_id: string | null; cost: number; }
@@ -11,6 +14,8 @@ const ManagerEmployees = () => {
   const { profiles: managers } = useProfilesByRole("manager");
   const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q);
   const { data: history } = useLiveTable<History>("service_history", (q) => q);
+  const [showAdd, setShowAdd] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const getStats = (uid: string) => {
     const assigned = bookings.filter((b) => b.assigned_to === uid);
@@ -21,10 +26,15 @@ const ManagerEmployees = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-on-surface tracking-tight">Employee Directory</h1>
-        <p className="text-sm text-muted-foreground mt-1">Technical staff, current workload, and lifetime performance.</p>
+    <div className="space-y-8" key={refreshKey}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-on-surface tracking-tight">Employee Directory</h1>
+          <p className="text-sm text-muted-foreground mt-1">Technical staff, current workload, and lifetime performance.</p>
+        </div>
+        <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-[0.98] transition-all self-start">
+          <UserPlus className="w-4 h-4" /> Add Staff
+        </button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -52,7 +62,7 @@ const ManagerEmployees = () => {
             </thead>
             <tbody className="divide-y divide-border/10">
               {technicians.length === 0 && (
-                <tr><td colSpan={6} className="py-12 text-center text-sm text-muted-foreground">No technicians yet.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-sm text-muted-foreground">No technicians yet. Add your first staff account to get started.</td></tr>
               )}
               {technicians.map((t) => {
                 const stats = getStats(t.user_id);
@@ -102,6 +112,8 @@ const ManagerEmployees = () => {
           </div>
         </div>
       )}
+
+      {showAdd && <AddEmployeeDialog onClose={() => setShowAdd(false)} onCreated={() => setRefreshKey((k) => k + 1)} />}
     </div>
   );
 };

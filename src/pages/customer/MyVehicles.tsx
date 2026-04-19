@@ -1,9 +1,12 @@
+// Customer vehicles page with brand logos and an AI-powered maintenance tip section.
 import { useState } from "react";
-import { Plus, Car, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Loader2, Sparkles, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import VehicleBrandLogo from "@/components/VehicleBrandLogo";
 
 interface Vehicle {
   id: string;
@@ -17,7 +20,7 @@ interface Vehicle {
 }
 
 const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid"];
-const POPULAR_MAKES = ["Maruti Suzuki", "Tata", "Mahindra", "Hyundai", "Honda", "Toyota", "Kia", "MG", "Renault", "Volkswagen", "Skoda", "BMW", "Mercedes-Benz", "Audi"];
+const POPULAR_MAKES = ["Maruti Suzuki", "Tata", "Mahindra", "Hyundai", "Honda", "Toyota", "Kia", "MG", "Renault", "Volkswagen", "Skoda", "BMW", "Mercedes-Benz", "Audi", "Ford", "Nissan"];
 
 const empty = { make: "Maruti Suzuki", model: "", year: new Date().getFullYear(), registration: "", color: "", fuel_type: "Petrol", mileage: 0 };
 
@@ -29,6 +32,9 @@ const CustomerVehicles = () => {
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
+
+  // AI maintenance tips per vehicle
+  const [tipsByVehicle, setTipsByVehicle] = useState<Record<string, { loading: boolean; tips: string[] | null; error: string | null }>>({});
 
   const openAdd = () => { setEditing(null); setForm(empty); setOpen(true); };
   const openEdit = (v: Vehicle) => {
@@ -57,12 +63,25 @@ const CustomerVehicles = () => {
     if (error) toast.error(error.message); else toast.success("Vehicle removed");
   };
 
+  const fetchTips = async (v: Vehicle) => {
+    setTipsByVehicle((p) => ({ ...p, [v.id]: { loading: true, tips: null, error: null } }));
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-maintenance-tips", {
+        body: { make: v.make, model: v.model, year: v.year, mileage: v.mileage, fuel_type: v.fuel_type },
+      });
+      if (error) throw error;
+      setTipsByVehicle((p) => ({ ...p, [v.id]: { loading: false, tips: data?.tips ?? [], error: null } }));
+    } catch (e: any) {
+      setTipsByVehicle((p) => ({ ...p, [v.id]: { loading: false, tips: null, error: e.message ?? "Could not fetch tips" } }));
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-on-surface tracking-tight">My Vehicles</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your garage and registered vehicles.</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage your garage and get AI-powered maintenance recommendations.</p>
         </div>
         <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-[0.98] transition-all self-start">
           <Plus className="w-4 h-4" /> Add Vehicle
@@ -73,7 +92,7 @@ const CustomerVehicles = () => {
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       ) : vehicles.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-border/30 rounded-xl">
-          <Car className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+          <VehicleBrandLogo make={null} size={48} className="mx-auto mb-3" />
           <h3 className="font-bold text-on-surface">No vehicles yet</h3>
           <p className="text-sm text-muted-foreground mt-1 mb-4">Add your first vehicle to start booking services.</p>
           <button onClick={openAdd} className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold">
@@ -81,31 +100,69 @@ const CustomerVehicles = () => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {vehicles.map((v) => (
-            <div key={v.id} className="bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden hover:shadow-md transition-all">
-              <div className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="p-2.5 bg-primary/10 rounded-lg"><Car className="w-5 h-5 text-primary" /></div>
-                  <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-emerald-50 text-emerald-600">Active</span>
-                </div>
-                <h3 className="font-bold text-on-surface">{v.year} {v.make} {v.model}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{v.color || "—"} • {v.fuel_type}</p>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xs font-mono bg-surface-container px-2 py-1 rounded">{v.registration}</span>
-                  <span className="text-xs font-mono text-muted-foreground">{v.mileage.toLocaleString("en-IN")} km</span>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <button onClick={() => openEdit(v)} className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-border/30 rounded-lg text-xs font-bold hover:bg-surface-container active:scale-[0.98] transition-all">
-                    <Pencil className="w-3.5 h-3.5" /> Edit
-                  </button>
-                  <button onClick={() => remove(v)} className="px-3 py-2 border border-destructive/30 rounded-lg text-destructive hover:bg-destructive/5 active:scale-[0.98] transition-all">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {vehicles.map((v) => {
+            const tip = tipsByVehicle[v.id];
+            return (
+              <div key={v.id} className="bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden hover:shadow-md transition-all">
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <VehicleBrandLogo make={v.make} size={44} />
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-on-surface truncate">{v.year} {v.make} {v.model}</h3>
+                        <p className="text-xs text-muted-foreground">{v.color || "—"} • {v.fuel_type}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-emerald-50 text-emerald-600 shrink-0">Active</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-xs font-mono bg-surface-container px-2 py-1 rounded">{v.registration}</span>
+                    <span className="text-xs font-mono text-muted-foreground">{v.mileage.toLocaleString("en-IN")} km</span>
+                  </div>
+
+                  <div className="mt-4 p-3 rounded-lg bg-gradient-to-br from-primary/5 to-transparent border border-primary/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-primary flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3" /> AI Maintenance Tips
+                      </p>
+                      <button
+                        onClick={() => fetchTips(v)}
+                        disabled={tip?.loading}
+                        className="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
+                      >
+                        {tip?.tips ? "Refresh" : "Get tips"}
+                      </button>
+                    </div>
+                    {!tip && <p className="text-xs text-muted-foreground">Tap "Get tips" for personalised recommendations based on your vehicle's age, fuel type and odometer.</p>}
+                    {tip?.loading && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" /> Thinking…</div>}
+                    {tip?.error && <p className="text-xs text-destructive">{tip.error}</p>}
+                    {tip?.tips && (
+                      <ul className="space-y-1.5">
+                        {tip.tips.slice(0, 4).map((t, i) => (
+                          <li key={i} className="text-xs text-on-surface flex gap-2"><span className="text-primary">•</span> {t}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {tip?.tips && (
+                      <Link to="/customer/book" className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline">
+                        <Calendar className="w-3 h-3" /> Book a service
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => openEdit(v)} className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-border/30 rounded-lg text-xs font-bold hover:bg-surface-container active:scale-[0.98] transition-all">
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button onClick={() => remove(v)} className="px-3 py-2 border border-destructive/30 rounded-lg text-destructive hover:bg-destructive/5 active:scale-[0.98] transition-all">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

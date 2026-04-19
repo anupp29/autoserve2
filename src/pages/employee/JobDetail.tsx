@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { CheckCircle, ArrowLeft, Save, Wrench, Clock, AlertCircle, PlayCircle } from "lucide-react";
+import { CheckCircle, ArrowLeft, Save, AlertCircle, PlayCircle, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -27,6 +27,7 @@ const EmployeeJobDetail = () => {
   const [partsUsed, setPartsUsed] = useState("");
   const [mileageAtService, setMileageAtService] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiSummary, setAiSummary] = useState<{ loading: boolean; text: string | null; error: string | null }>({ loading: false, text: null, error: null });
 
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q);
   const { data: services } = useLiveTable<Service>("services", (q) => q);
@@ -92,6 +93,34 @@ const EmployeeJobDetail = () => {
     }
   };
 
+  const fetchAiSummary = async () => {
+    if (!vehicle) return;
+    setAiSummary({ loading: true, text: null, error: null });
+    try {
+      const { data: hist } = await supabase
+        .from("service_history")
+        .select("service_date, cost, notes, parts_used, mileage_at_service, service_id")
+        .eq("vehicle_id", vehicle.id)
+        .order("service_date", { ascending: false })
+        .limit(10);
+      const enriched = (hist ?? []).map((h: any) => ({
+        ...h,
+        service: services.find((s) => s.id === h.service_id)?.name ?? "Service",
+      }));
+      const { data, error } = await supabase.functions.invoke("ai-vehicle-summary", {
+        body: {
+          vehicle: { make: vehicle.make, model: vehicle.model, year: vehicle.year, mileage: vehicle.mileage, fuel_type: vehicle.fuel_type },
+          history: enriched,
+          current_service: service?.name,
+        },
+      });
+      if (error) throw error;
+      setAiSummary({ loading: false, text: data?.summary ?? "No summary available.", error: null });
+    } catch (e: any) {
+      setAiSummary({ loading: false, text: null, error: e.message ?? "AI summary failed" });
+    }
+  };
+
   const saveNotes = async () => {
     setSaving(true);
     const { error } = await supabase.from("bookings").update({ notes }).eq("id", booking.id);
@@ -154,6 +183,24 @@ const EmployeeJobDetail = () => {
                 <p className="text-sm font-bold text-on-surface mt-1 uppercase">{booking.priority}</p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-primary/5 to-transparent p-5 rounded-xl border border-primary/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-bold text-on-surface">AI Vehicle History Summary</h3>
+              </div>
+              <button onClick={fetchAiSummary} disabled={aiSummary.loading} className="text-xs font-bold text-primary hover:underline disabled:opacity-50">
+                {aiSummary.text ? "Refresh" : "Generate"}
+              </button>
+            </div>
+            {!aiSummary.text && !aiSummary.loading && !aiSummary.error && (
+              <p className="text-xs text-muted-foreground">Generate an AI-written summary of this vehicle's previous service history before starting work.</p>
+            )}
+            {aiSummary.loading && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analysing past services…</div>}
+            {aiSummary.error && <p className="text-xs text-destructive">{aiSummary.error}</p>}
+            {aiSummary.text && <p className="text-sm text-on-surface whitespace-pre-wrap leading-relaxed">{aiSummary.text}</p>}
           </div>
 
           <div className="bg-card p-6 rounded-xl border border-border/20 shadow-sm">

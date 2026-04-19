@@ -14,13 +14,17 @@ interface Booking {
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; }
 interface Service { id: string; name: string; }
 
-const tabs = ["All", "pending", "confirmed", "in_progress", "completed", "cancelled"] as const;
+const tabs = ["All", "pending", "confirmed", "checked_in", "in_progress", "ready_for_pickup", "completed", "released", "cancelled"] as const;
+const ALL_STATUSES = ["pending", "confirmed", "checked_in", "in_progress", "ready_for_pickup", "completed", "released", "cancelled"] as const;
 
 const statusColor: Record<string, string> = {
   pending: "text-amber-600 bg-amber-50",
   confirmed: "text-primary bg-primary/10",
+  checked_in: "text-primary bg-primary/10",
   in_progress: "text-primary bg-primary/10",
+  ready_for_pickup: "text-emerald-600 bg-emerald-50",
   completed: "text-emerald-600 bg-emerald-50",
+  released: "text-emerald-700 bg-emerald-50",
   cancelled: "text-destructive bg-destructive/10",
 };
 
@@ -144,9 +148,9 @@ const ManagerBookings = () => {
                     <td className="py-3 px-4 text-sm font-mono text-on-surface">{formatINR(b.total_cost)}</td>
                     <td className="py-3 px-4">
                       <select value={b.status} onChange={(e) => updateStatus(b, e.target.value)}
-                        className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border-0 cursor-pointer ${statusColor[b.status]}`}>
-                        {["pending", "confirmed", "in_progress", "completed", "cancelled"].map((s) => (
-                          <option key={s} value={s}>{s.replace("_", " ")}</option>
+                        className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border-0 cursor-pointer ${statusColor[b.status] ?? "bg-surface-container text-on-surface"}`}>
+                        {ALL_STATUSES.map((s) => (
+                          <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
                         ))}
                       </select>
                     </td>
