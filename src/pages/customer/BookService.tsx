@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Car, Clock, Loader2, AlertCircle, Wrench } from "lucide-react";
+import { CheckCircle, Car, Clock, Loader2, AlertCircle, Wrench, X, Calendar as CalIcon } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ const BookService = () => {
   const [priority, setPriority] = useState<"normal" | "express" | "priority">("normal");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; ref: string } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -51,7 +53,7 @@ const BookService = () => {
     if (!user || !selectedService || !selectedVehicle) return;
     setBusy(true);
     const scheduled_at = new Date(`${date}T${time}:00`).toISOString();
-    const { error } = await supabase.from("bookings").insert({
+    const { data, error } = await supabase.from("bookings").insert({
       customer_id: user.id,
       vehicle_id: selectedVehicle,
       service_id: selectedService,
@@ -60,11 +62,11 @@ const BookService = () => {
       priority,
       notes: notes || null,
       total_cost: svc?.price ?? null,
-    });
+    }).select("id").single();
     setBusy(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Booking confirmed! Redirecting…");
-    setTimeout(() => navigate("/customer/bookings"), 800);
+    toast.success("Booking confirmed!");
+    setConfirmedBooking({ id: data.id, ref: data.id.slice(0, 8).toUpperCase() });
   };
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
