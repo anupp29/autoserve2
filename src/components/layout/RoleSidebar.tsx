@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Wrench, Package, Users, UserCog, BarChart3,
   LogOut, ClipboardList, Car, Calendar, History,
-  X, Bot, DollarSign,
+  X, Bot, DollarSign, ScanLine,
 } from "lucide-react";
 import AutoServeLogo from "@/components/AutoServeLogo";
 import type { UserRole } from "./RoleLayout";
@@ -20,6 +20,7 @@ interface NavItem {
 const managerNav: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/manager/dashboard" },
   { label: "Bookings", icon: ClipboardList, path: "/manager/bookings" },
+  { label: "Scan Hand-off", icon: ScanLine, path: "/manager/scan" },
   { label: "Service History", icon: History, path: "/manager/history" },
   { label: "Services", icon: Wrench, path: "/manager/services" },
   { label: "Inventory", icon: Package, path: "/manager/inventory" },
@@ -31,6 +32,7 @@ const managerNav: NavItem[] = [
 const employeeNav: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/employee/dashboard" },
   { label: "Service Queue", icon: Wrench, path: "/employee/queue" },
+  { label: "Scan Hand-off", icon: ScanLine, path: "/employee/scan" },
   { label: "Inventory", icon: Package, path: "/employee/inventory" },
   { label: "Performance", icon: BarChart3, path: "/employee/performance" },
 ];
