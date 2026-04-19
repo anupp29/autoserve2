@@ -47,9 +47,10 @@ const ManagerBookings = () => {
   }, [bookings, activeTab, search, vehicles, services, byId]);
 
   const assign = async (b: Booking, techId: string) => {
+    const newStatus = techId && b.status === "pending" ? "confirmed" : (b.status as any);
     const { error } = await supabase.from("bookings").update({
       assigned_to: techId || null,
-      status: techId && b.status === "pending" ? "confirmed" : b.status,
+      status: newStatus,
     }).eq("id", b.id);
     if (error) { toast.error(error.message); return; }
     toast.success(techId ? "Technician assigned" : "Unassigned");
