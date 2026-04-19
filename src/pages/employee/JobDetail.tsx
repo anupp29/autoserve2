@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { CheckCircle, ArrowLeft, Save, Wrench, Clock, AlertCircle, PlayCircle } from "lucide-react";
+import { CheckCircle, ArrowLeft, Save, Wrench, Clock, AlertCircle, PlayCircle, PackageCheck, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
 import { formatINR, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
+import { issueHandoverToken } from "@/lib/handover";
+import BrandLogo from "@/components/BrandLogo";
 
 interface Booking {
   id: string; status: string; priority: string; scheduled_at: string; notes: string | null;
