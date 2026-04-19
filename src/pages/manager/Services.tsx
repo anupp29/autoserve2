@@ -10,8 +10,8 @@ interface Service {
   price: number; duration_minutes: number; active: boolean;
 }
 
-const CATEGORIES = ["All", "Engine", "Brakes", "Tires", "Electrical", "AC", "Body", "Inspection", "Other"];
-const empty = { name: "", description: "", category: "Engine", price: 0, duration_minutes: 60, active: true };
+const CATEGORIES = ["All", "Maintenance", "Engine", "Brakes", "Tyres", "Electrical", "AC", "Body", "Cleaning", "Diagnostics", "Repair", "Inspection", "Other"];
+const empty = { name: "", description: "", category: "Maintenance", price: 0, duration_minutes: 60, active: true };
 
 const ManagerServices = () => {
   const { data: services } = useLiveTable<Service>("services", (q) => q.order("name"));
