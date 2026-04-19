@@ -17,11 +17,16 @@ export type Database = {
       bookings: {
         Row: {
           assigned_to: string | null
+          checked_in_at: string | null
           created_at: string
           customer_id: string
+          dropoff_code: string | null
+          extra_service_ids: string[]
           id: string
           notes: string | null
+          pickup_code: string | null
           priority: Database["public"]["Enums"]["booking_priority"]
+          released_at: string | null
           scheduled_at: string
           service_id: string
           status: Database["public"]["Enums"]["booking_status"]
@@ -31,11 +36,16 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          checked_in_at?: string | null
           created_at?: string
           customer_id: string
+          dropoff_code?: string | null
+          extra_service_ids?: string[]
           id?: string
           notes?: string | null
+          pickup_code?: string | null
           priority?: Database["public"]["Enums"]["booking_priority"]
+          released_at?: string | null
           scheduled_at: string
           service_id: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -45,11 +55,16 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          checked_in_at?: string | null
           created_at?: string
           customer_id?: string
+          dropoff_code?: string | null
+          extra_service_ids?: string[]
           id?: string
           notes?: string | null
+          pickup_code?: string | null
           priority?: Database["public"]["Enums"]["booking_priority"]
+          released_at?: string | null
           scheduled_at?: string
           service_id?: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -240,6 +255,39 @@ export type Database = {
           },
         ]
       }
+      service_reminders: {
+        Row: {
+          acknowledged: boolean
+          created_at: string
+          customer_id: string
+          due_date: string
+          id: string
+          message: string
+          title: string
+          vehicle_id: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          created_at?: string
+          customer_id: string
+          due_date: string
+          id?: string
+          message: string
+          title: string
+          vehicle_id: string
+        }
+        Update: {
+          acknowledged?: boolean
+          created_at?: string
+          customer_id?: string
+          due_date?: string
+          id?: string
+          message?: string
+          title?: string
+          vehicle_id?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           active: boolean
@@ -299,6 +347,7 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          brand_logo_url: string | null
           color: string | null
           created_at: string
           fuel_type: string | null
@@ -312,6 +361,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          brand_logo_url?: string | null
           color?: string | null
           created_at?: string
           fuel_type?: string | null
@@ -325,6 +375,7 @@ export type Database = {
           year: number
         }
         Update: {
+          brand_logo_url?: string | null
           color?: string | null
           created_at?: string
           fuel_type?: string | null
@@ -365,6 +416,9 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+        | "checked_in"
+        | "ready_for_pickup"
+        | "released"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -500,6 +554,9 @@ export const Constants = {
         "in_progress",
         "completed",
         "cancelled",
+        "checked_in",
+        "ready_for_pickup",
+        "released",
       ],
     },
   },
