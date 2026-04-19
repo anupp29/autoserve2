@@ -67,9 +67,12 @@ async function seedCatalog() {
     { name: "Diagnostic Scan", category: "Diagnostics", description: "Full OBD-II scan with detailed report", price: 999, duration_minutes: 30 },
     { name: "Detailing & Wash", category: "Cleaning", description: "Premium interior + exterior detailing", price: 1999, duration_minutes: 120 },
   ];
-  for (const s of services) {
-    await admin.from("services").upsert(s, { onConflict: "name" });
-  }
+  // Clear and reinsert (no unique on name)
+  await admin.from("bookings").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("service_history").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("services").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  const { error: svcErr } = await admin.from("services").insert(services);
+  if (svcErr) console.error("services insert error:", svcErr);
 
   // Inventory
   const inventory = [
