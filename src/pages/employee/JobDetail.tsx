@@ -14,6 +14,7 @@ interface Booking {
   id: string; status: string; priority: string; scheduled_at: string; notes: string | null;
   total_cost: number | null; service_id: string; vehicle_id: string; customer_id: string;
   assigned_to: string | null;
+  checked_in_at: string | null; checked_out_at: string | null; ready_for_pickup: boolean;
 }
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; mileage: number; fuel_type: string | null; color: string | null; }
 interface Service { id: string; name: string; duration_minutes: number; price: number; category: string; }
