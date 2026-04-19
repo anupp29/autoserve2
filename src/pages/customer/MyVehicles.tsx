@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import BrandLogo from "@/components/BrandLogo";
 
 interface Vehicle {
   id: string;
@@ -83,10 +84,10 @@ const CustomerVehicles = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {vehicles.map((v) => (
-            <div key={v.id} className="bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden hover:shadow-md transition-all">
+            <div key={v.id} className="bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden hover:shadow-md transition-all group">
               <div className="p-5">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="p-2.5 bg-primary/10 rounded-lg"><Car className="w-5 h-5 text-primary" /></div>
+                  <BrandLogo make={v.make} size={44} className="group-hover:scale-105 transition-transform" />
                   <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-emerald-50 text-emerald-600">Active</span>
                 </div>
                 <h3 className="font-bold text-on-surface">{v.year} {v.make} {v.model}</h3>
