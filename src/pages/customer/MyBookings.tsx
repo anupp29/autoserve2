@@ -1,5 +1,5 @@
 // Customer bookings list with QR pass buttons (drop-off + pick-up).
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Calendar, MapPin, CheckCircle, Loader2, AlertCircle, QrCode, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,7 +50,16 @@ const CustomerBookings = () => {
   const vehicles = useMemo(() => { const m: Record<string, Vehicle> = {}; vehiclesArr.forEach((v) => { m[v.id] = v; }); return m; }, [vehiclesArr]);
   const services = useMemo(() => { const m: Record<string, Service> = {}; servicesArr.forEach((s) => { m[s.id] = s; }); return m; }, [servicesArr]);
 
-  const filtered = bookings.filter((b) => {
+  // Optimistic overrides for instant cancel feedback
+  const [optimistic, setOptimistic] = useState<Record<string, Partial<Booking>>>({});
+  useEffect(() => { setOptimistic({}); }, [bookings]);
+
+  const displayed = useMemo(
+    () => bookings.map((b) => optimistic[b.id] ? { ...b, ...optimistic[b.id] } : b),
+    [bookings, optimistic]
+  );
+
+  const filtered = displayed.filter((b) => {
     if (tab === "All") return true;
     if (tab === "Upcoming") return ["pending", "confirmed"].includes(b.status);
     if (tab === "In Progress") return ["checked_in", "in_progress", "ready_for_pickup"].includes(b.status);
@@ -61,13 +70,20 @@ const CustomerBookings = () => {
 
   const cancel = async (id: string) => {
     if (!confirm("Cancel this booking?")) return;
+    // Optimistic update
+    setOptimistic((prev) => ({ ...prev, [id]: { ...prev[id], status: "cancelled" } }));
     const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id);
-    if (error) toast.error(error.message); else toast.success("Booking cancelled");
+    if (error) {
+      setOptimistic((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      toast.error(error.message);
+    } else {
+      toast.success("Booking cancelled");
+    }
   };
 
   const counts = {
-    upcoming: bookings.filter((b) => ["pending", "confirmed"].includes(b.status)).length,
-    inprog: bookings.filter((b) => ["checked_in", "in_progress", "ready_for_pickup"].includes(b.status)).length,
+    upcoming: displayed.filter((b) => ["pending", "confirmed"].includes(b.status)).length,
+    inprog: displayed.filter((b) => ["checked_in", "in_progress", "ready_for_pickup"].includes(b.status)).length,
   };
 
   return (

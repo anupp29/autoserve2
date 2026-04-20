@@ -60,13 +60,20 @@ const EmployeeJobDetail = () => {
 
   const updateStatus = async (newStatus: string) => {
     if (!booking) return;
+    // Optimistic update — reflect change immediately in local state
+    setBooking((prev) => prev ? { ...prev, status: newStatus } : prev);
     setSaving(true);
     const { error } = await supabase
       .from("bookings")
       .update({ status: newStatus as any, notes })
       .eq("id", booking.id);
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      // Revert optimistic update
+      setBooking((prev) => prev ? { ...prev, status: booking.status } : prev);
+      toast.error(error.message);
+      return;
+    }
     toast.success(`Status → ${newStatus.replace("_", " ")}`);
 
     // Notify customer

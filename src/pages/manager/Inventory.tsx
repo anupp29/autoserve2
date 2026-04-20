@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Edit2, Trash2, X, Package, AlertTriangle, IndianRupee, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -23,8 +23,17 @@ const ManagerInventory = () => {
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
 
+  // Optimistic overrides for instant restock feedback
+  const [optimistic, setOptimistic] = useState<Record<string, Partial<Item>>>({});
+  useEffect(() => { setOptimistic({}); }, [items]);
+
+  const displayed = useMemo(
+    () => items.map((i) => optimistic[i.id] ? { ...i, ...optimistic[i.id] } : i),
+    [items, optimistic]
+  );
+
   const filtered = useMemo(() => {
-    return items.filter((i) => {
+    return displayed.filter((i) => {
       if (tab === "low" && i.quantity > i.reorder_level) return false;
       if (search) {
         const hay = `${i.name} ${i.sku} ${i.category} ${i.supplier ?? ""}`.toLowerCase();
@@ -32,10 +41,10 @@ const ManagerInventory = () => {
       }
       return true;
     });
-  }, [items, tab, search]);
+  }, [displayed, tab, search]);
 
-  const totalValue = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
-  const lowCount = items.filter((i) => i.quantity <= i.reorder_level).length;
+  const totalValue = displayed.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+  const lowCount = displayed.filter((i) => i.quantity <= i.reorder_level).length;
 
   const openCreate = () => { setEditing(null); setForm(empty); setShowForm(true); };
   const openEdit = (i: Item) => {
@@ -65,9 +74,15 @@ const ManagerInventory = () => {
 
   const restock = async (i: Item) => {
     const target = i.reorder_level * 4;
+    // Optimistic update
+    setOptimistic((prev) => ({ ...prev, [i.id]: { ...prev[i.id], quantity: target } }));
     const { error } = await supabase.from("inventory").update({ quantity: target }).eq("id", i.id);
-    if (error) toast.error(error.message);
-    else toast.success(`Restocked ${i.name} to ${target}`);
+    if (error) {
+      setOptimistic((prev) => { const next = { ...prev }; delete next[i.id]; return next; });
+      toast.error(error.message);
+    } else {
+      toast.success(`Restocked ${i.name} to ${target}`);
+    }
   };
 
   const remove = async (i: Item) => {
@@ -90,9 +105,9 @@ const ManagerInventory = () => {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label="Total SKUs" value={String(items.length)} icon={Package} bg="bg-primary/10" color="text-primary" />
+        <Kpi label="Total SKUs" value={String(displayed.length)} icon={Package} bg="bg-primary/10" color="text-primary" />
         <Kpi label="Low Stock" value={String(lowCount)} icon={AlertTriangle} bg="bg-destructive/10" color="text-destructive" valueColor="text-destructive" />
-        <Kpi label="Suppliers" value={String(new Set(items.map((i) => i.supplier).filter(Boolean)).size)} icon={Truck} bg="bg-primary/10" color="text-primary" />
+        <Kpi label="Suppliers" value={String(new Set(displayed.map((i) => i.supplier).filter(Boolean)).size)} icon={Truck} bg="bg-primary/10" color="text-primary" />
         <Kpi label="Inventory Value" value={formatINR(totalValue)} icon={IndianRupee} bg="bg-emerald-50" color="text-emerald-600" mono />
       </div>
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Edit2, Trash2, X, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -21,9 +21,18 @@ const ManagerServices = () => {
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
 
+  // Optimistic overrides for instant toggle feedback
+  const [optimistic, setOptimistic] = useState<Record<string, Partial<Service>>>({});
+  useEffect(() => { setOptimistic({}); }, [services]);
+
+  const displayed = useMemo(
+    () => services.map((s) => optimistic[s.id] ? { ...s, ...optimistic[s.id] } : s),
+    [services, optimistic]
+  );
+
   const filtered = useMemo(
-    () => activeCategory === "All" ? services : services.filter((s) => s.category === activeCategory),
-    [services, activeCategory]
+    () => activeCategory === "All" ? displayed : displayed.filter((s) => s.category === activeCategory),
+    [displayed, activeCategory]
   );
 
   const openCreate = () => { setEditing(null); setForm(empty); setShowForm(true); };
@@ -50,9 +59,16 @@ const ManagerServices = () => {
   };
 
   const toggleActive = async (s: Service) => {
-    const { error } = await supabase.from("services").update({ active: !s.active }).eq("id", s.id);
-    if (error) toast.error(error.message);
-    else toast.success(`${s.name} ${!s.active ? "activated" : "deactivated"}`);
+    const newActive = !s.active;
+    // Optimistic update — instant visual feedback
+    setOptimistic((prev) => ({ ...prev, [s.id]: { ...prev[s.id], active: newActive } }));
+    const { error } = await supabase.from("services").update({ active: newActive }).eq("id", s.id);
+    if (error) {
+      setOptimistic((prev) => { const next = { ...prev }; delete next[s.id]; return next; });
+      toast.error(error.message);
+    } else {
+      toast.success(`${s.name} ${newActive ? "activated" : "deactivated"}`);
+    }
   };
 
   const remove = async (s: Service) => {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Filter, Download, CheckCircle, Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
 import { formatINR, formatDate } from "@/lib/format";
