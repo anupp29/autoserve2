@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Calendar, Download, TrendingUp } from "lucide-react";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
@@ -8,16 +8,26 @@ interface History { id: string; cost: number; service_date: string; service_id: 
 interface Service { id: string; name: string; category: string; }
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; }
 
+const PERIODS = [
+  { label: "Last 7 days", days: 7 },
+  { label: "Last 30 days", days: 30 },
+  { label: "Last 90 days", days: 90 },
+  { label: "All time", days: 0 },
+] as const;
+
 const ManagerReports = () => {
   const { data: history } = useLiveTable<History>("service_history", (q) => q.order("service_date", { ascending: false }));
   const { data: services } = useLiveTable<Service>("services", (q) => q);
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q);
   const { byId } = useProfilesByRole();
+  const [periodDays, setPeriodDays] = useState(30);
 
-  const monthAgo = Date.now() - 30 * 24 * 3600 * 1000;
-  const thisMonth = history.filter((h) => new Date(h.service_date).getTime() >= monthAgo);
-  const totalRevenue = thisMonth.reduce((s, h) => s + Number(h.cost || 0), 0);
-  const avgTicket = thisMonth.length ? totalRevenue / thisMonth.length : 0;
+  const periodMs = periodDays > 0 ? periodDays * 24 * 3600 * 1000 : Infinity;
+  const since = periodDays > 0 ? Date.now() - periodMs : 0;
+  const periodHistory = history.filter((h) => new Date(h.service_date).getTime() >= since);
+
+  const totalRevenue = periodHistory.reduce((s, h) => s + Number(h.cost || 0), 0);
+  const avgTicket = periodHistory.length ? totalRevenue / periodHistory.length : 0;
 
   // monthly bars (last 6 months)
   const months = useMemo(() => {
@@ -40,7 +50,7 @@ const ManagerReports = () => {
   // service distribution
   const distribution = useMemo(() => {
     const totals: Record<string, number> = {};
-    history.forEach((h) => {
+    periodHistory.forEach((h) => {
       const cat = services.find((s) => s.id === h.service_id)?.category || "Other";
       totals[cat] = (totals[cat] || 0) + Number(h.cost || 0);
     });
@@ -49,7 +59,7 @@ const ManagerReports = () => {
       .map(([name, amt]) => ({ name, pct: Math.round((amt / grand) * 100), amt }))
       .sort((a, b) => b.amt - a.amt)
       .slice(0, 5);
-  }, [history, services]);
+  }, [periodHistory, services]);
 
   const exportCsv = () => {
     const rows = [
@@ -75,18 +85,28 @@ const ManagerReports = () => {
           <h1 className="text-2xl font-bold text-on-surface tracking-tight">Performance Reports</h1>
           <p className="text-sm text-muted-foreground mt-1">Live financial overview and service distribution.</p>
         </div>
-        <div className="flex gap-2 self-start">
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-border/30 rounded-lg text-sm font-medium text-on-surface">
-            <Calendar className="w-4 h-4" /> Last 30 days
-          </button>
-          <button onClick={exportCsv} className="flex items-center gap-2 bg-on-surface text-card px-5 py-2.5 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity">
+        <div className="flex gap-2 self-start flex-wrap">
+          {PERIODS.map((p) => (
+            <button
+              key={p.days}
+              onClick={() => setPeriodDays(p.days)}
+              className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-all ${
+                periodDays === p.days
+                  ? "bg-on-surface text-card border-on-surface"
+                  : "border-border/30 text-on-surface hover:bg-surface-container"
+              }`}
+            >
+              <Calendar className="w-4 h-4" /> {p.label}
+            </button>
+          ))}
+          <button onClick={exportCsv} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
             <Download className="w-4 h-4" /> Export CSV
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
-        <Kpi label="Revenue (30d)" value={formatINR(totalRevenue)} sub={`${thisMonth.length} services`} subColor="text-emerald-600" />
+        <Kpi label={`Revenue (${periodDays > 0 ? `${periodDays}d` : "All time"})`} value={formatINR(totalRevenue)} sub={`${periodHistory.length} services`} subColor="text-emerald-600" />
         <Kpi label="Avg. Ticket" value={formatINR(avgTicket)} sub="per completed service" subColor="text-emerald-600" />
         <Kpi label="Lifetime Records" value={String(history.length)} sub="all-time history" subColor="text-muted-foreground" />
       </div>

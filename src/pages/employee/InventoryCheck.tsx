@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Package, AlertTriangle, Search, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -15,25 +15,38 @@ const EmployeeInventoryCheck = () => {
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
-  const filtered = items.filter((i) =>
+  // Optimistic overrides for instant "Use 1" feedback
+  const [optimistic, setOptimistic] = useState<Record<string, Partial<Item>>>({});
+  useEffect(() => { setOptimistic({}); }, [items]);
+
+  const displayed = items.map((i) => optimistic[i.id] ? { ...i, ...optimistic[i.id] } as Item : i);
+
+  const filtered = displayed.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()) ||
     i.sku.toLowerCase().includes(search.toLowerCase())
   );
 
-  const lowCount = items.filter((i) => i.quantity <= i.reorder_level).length;
-  const totalSkus = items.length;
-  const totalValue = items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
+  const lowCount = displayed.filter((i) => i.quantity <= i.reorder_level).length;
+  const totalSkus = displayed.length;
+  const totalValue = displayed.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
 
   const consume = async (item: Item) => {
     if (item.quantity <= 0) return;
+    const newQty = item.quantity - 1;
+    // Optimistic update
+    setOptimistic((prev) => ({ ...prev, [item.id]: { ...prev[item.id], quantity: newQty } }));
     setBusy(item.id);
     const { error } = await supabase
       .from("inventory")
-      .update({ quantity: item.quantity - 1 })
+      .update({ quantity: newQty })
       .eq("id", item.id);
     setBusy(null);
-    if (error) toast.error(error.message);
-    else toast.success(`Used 1 × ${item.name}`);
+    if (error) {
+      setOptimistic((prev) => { const { [item.id]: _, ...next } = prev; return next; });
+      toast.error(error.message);
+    } else {
+      toast.success(`Used 1 × ${item.name}`);
+    }
   };
 
   return (

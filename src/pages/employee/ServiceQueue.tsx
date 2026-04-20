@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Clock, CheckCircle, AlertTriangle, ArrowRight, Wrench } from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, ArrowRight, Wrench, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
@@ -28,6 +29,7 @@ const priorityColor: Record<string, string> = {
 
 const EmployeeServiceQueue = () => {
   const { user } = useAuth();
+  const [search, setSearch] = useState("");
   const { data: bookings } = useLiveTable<Booking>(
     "bookings",
     (q) => q.eq("assigned_to", user?.id).order("scheduled_at"),
@@ -50,6 +52,15 @@ const EmployeeServiceQueue = () => {
   const inQueue = todays.filter((b) => b.status === "pending" || b.status === "confirmed").length;
   const inProg = todays.filter((b) => b.status === "in_progress").length;
   const completed = todays.filter((b) => b.status === "completed").length;
+
+  const filteredBookings = bookings.filter((j) => {
+    if (!search) return true;
+    const v = veh(j.vehicle_id);
+    const s = svc(j.service_id);
+    const cust = profilesById[j.customer_id]?.full_name ?? "";
+    const hay = `${j.id} ${v?.make ?? ""} ${v?.model ?? ""} ${v?.registration ?? ""} ${s?.name ?? ""} ${cust}`.toLowerCase();
+    return hay.includes(search.toLowerCase());
+  });
 
   return (
     <div className="space-y-8">
@@ -76,8 +87,13 @@ const EmployeeServiceQueue = () => {
       </div>
 
       <div className="bg-card rounded-xl border border-border/20 shadow-sm">
-        <div className="p-4 lg:p-6 border-b border-border/20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 lg:p-6 border-b border-border/20 gap-4">
           <h3 className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">All Assigned Work Orders</h3>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
+              className="w-full pl-10 pr-3 py-2 bg-surface-container border border-border/20 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px]">
@@ -93,10 +109,10 @@ const EmployeeServiceQueue = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/10">
-              {bookings.length === 0 && (
-                <tr><td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">No jobs assigned to you yet.</td></tr>
+              {filteredBookings.length === 0 && (
+                <tr><td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">{bookings.length === 0 ? "No jobs assigned to you yet." : "No matching jobs."}</td></tr>
               )}
-              {bookings.map((j) => {
+              {filteredBookings.map((j) => {
                 const v = veh(j.vehicle_id); const s = svc(j.service_id);
                 const cust = profilesById[j.customer_id]?.full_name || "Customer";
                 return (
