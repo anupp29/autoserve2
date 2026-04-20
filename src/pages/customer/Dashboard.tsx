@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
-import { Car, Calendar, MapPin, CheckCircle, Clock, Wrench, ArrowRight, Plus, Activity } from "lucide-react";
+import { Car, Calendar, MapPin, Wrench, ArrowRight, Plus, Activity, Sparkles, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { formatINR, formatDateTime, formatDate } from "@/lib/format";
+import VehicleBrandLogo from "@/components/VehicleBrandLogo";
 
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; mileage: number; color: string | null; fuel_type: string | null; }
 interface Booking { id: string; scheduled_at: string; status: string; priority: string; total_cost: number | null; vehicle_id: string; service_id: string; }
