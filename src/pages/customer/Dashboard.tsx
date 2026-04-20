@@ -126,6 +126,37 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
+      {/* AI Maintenance Tips */}
+      {tips.vehicle && (
+        <div className="bg-gradient-to-br from-primary/5 via-card to-card p-6 rounded-xl border border-primary/20 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10"><Sparkles className="w-5 h-5 text-primary" /></div>
+              <div>
+                <h3 className="font-bold text-on-surface">AI Maintenance Recommendations</h3>
+                <p className="text-xs text-muted-foreground">Personalised for your {tips.vehicle.year} {tips.vehicle.make} {tips.vehicle.model}</p>
+              </div>
+            </div>
+            <Link to="/customer/book" className="text-xs font-bold text-primary hover:underline self-start sm:self-auto">Book a service →</Link>
+          </div>
+          {tips.loading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4"><Loader2 className="w-4 h-4 animate-spin" /> Analysing your vehicle history…</div>
+          )}
+          {!tips.loading && tips.items && tips.items.length > 0 && (
+            <ul className="grid sm:grid-cols-2 gap-2.5">
+              {tips.items.slice(0, 4).map((t, i) => (
+                <li key={i} className="text-sm text-on-surface flex gap-2 p-3 rounded-lg bg-card border border-border/20">
+                  <span className="text-primary font-bold">{i + 1}.</span> {t}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!tips.loading && (!tips.items || tips.items.length === 0) && (
+            <p className="text-sm text-muted-foreground">No tips available right now. Try again from the Vehicles page.</p>
+          )}
+        </div>
+      )}
+
       {/* History & quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-card p-6 rounded-xl border border-border/20 shadow-sm">
