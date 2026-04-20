@@ -15,7 +15,6 @@ const ManagerEmployees = () => {
   const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q);
   const { data: history } = useLiveTable<History>("service_history", (q) => q);
   const [showAdd, setShowAdd] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const getStats = (uid: string) => {
     const assigned = bookings.filter((b) => b.assigned_to === uid);
@@ -26,7 +25,7 @@ const ManagerEmployees = () => {
   };
 
   return (
-    <div className="space-y-8" key={refreshKey}>
+    <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-on-surface tracking-tight">Employee Directory</h1>
@@ -113,7 +112,7 @@ const ManagerEmployees = () => {
         </div>
       )}
 
-      {showAdd && <AddEmployeeDialog onClose={() => setShowAdd(false)} onCreated={() => setRefreshKey((k) => k + 1)} />}
+      {showAdd && <AddEmployeeDialog onClose={() => setShowAdd(false)} onCreated={() => {}} />}
     </div>
   );
 };

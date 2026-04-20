@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Filter, Download, CheckCircle, Wrench, Loader2, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
-import { supabase } from "@/integrations/supabase/client";
 import { formatDate, formatINR } from "@/lib/format";
 
 interface Record_ { id: string; service_date: string; cost: number; service_id: string; vehicle_id: string; mileage_at_service: number | null; parts_used: string | null; notes: string | null; }
@@ -12,19 +11,12 @@ interface Vehicle { id: string; make: string; model: string; year: number; regis
 const CustomerServiceHistory = () => {
   const { user } = useAuth();
   const { data: history, loading } = useLiveTable<Record_>("service_history", (q) => q.eq("customer_id", user?.id ?? "").order("service_date", { ascending: false }), [user?.id], { enabled: !!user });
-  const [services, setServices] = useState<Record<string, Service>>({});
-  const [vehicles, setVehicles] = useState<Record<string, Vehicle>>({});
+  const { data: servicesArr } = useLiveTable<Service>("services", (q) => q);
+  const { data: vehiclesArr } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? ""), [user?.id], { enabled: !!user });
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
 
-  useEffect(() => {
-    Promise.all([
-      supabase.from("services").select("id,name,category"),
-      supabase.from("vehicles").select("id,make,model,year,registration").eq("owner_id", user?.id ?? ""),
-    ]).then(([s, v]) => {
-      const sm: Record<string, Service> = {}; (s.data ?? []).forEach((x: any) => sm[x.id] = x); setServices(sm);
-      const vm: Record<string, Vehicle> = {}; (v.data ?? []).forEach((x: any) => vm[x.id] = x); setVehicles(vm);
-    });
-  }, [user?.id]);
+  const services = useMemo(() => { const m: Record<string, Service> = {}; servicesArr.forEach((s) => { m[s.id] = s; }); return m; }, [servicesArr]);
+  const vehicles = useMemo(() => { const m: Record<string, Vehicle> = {}; vehiclesArr.forEach((v) => { m[v.id] = v; }); return m; }, [vehiclesArr]);
 
   const filtered = vehicleFilter === "all" ? history : history.filter((h) => h.vehicle_id === vehicleFilter);
   const totalSpent = filtered.reduce((sum, h) => sum + Number(h.cost), 0);

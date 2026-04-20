@@ -3,7 +3,7 @@ import { Car, Calendar, MapPin, Wrench, ArrowRight, Plus, Activity, Sparkles, Lo
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatINR, formatDateTime, formatDate } from "@/lib/format";
 import VehicleBrandLogo from "@/components/VehicleBrandLogo";
 
@@ -24,20 +24,14 @@ const statusBadge = (s: string) => {
 
 const CustomerDashboard = () => {
   const { user, profile } = useAuth();
-  const [services, setServices] = useState<Record<string, Service>>({});
   const [tips, setTips] = useState<{ loading: boolean; items: string[] | null; vehicle: Vehicle | null }>({ loading: false, items: null, vehicle: null });
 
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? "").order("created_at", { ascending: false }), [user?.id], { enabled: !!user });
   const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q.eq("customer_id", user?.id ?? "").order("scheduled_at", { ascending: true }), [user?.id], { enabled: !!user });
   const { data: history } = useLiveTable<History>("service_history", (q) => q.eq("customer_id", user?.id ?? "").order("service_date", { ascending: false }).limit(5), [user?.id], { enabled: !!user });
+  const { data: servicesArr } = useLiveTable<Service>("services", (q) => q);
 
-  useEffect(() => {
-    supabase.from("services").select("id,name,category").then(({ data }) => {
-      const map: Record<string, Service> = {};
-      (data ?? []).forEach((s: any) => { map[s.id] = s; });
-      setServices(map);
-    });
-  }, []);
+  const services = useMemo(() => { const m: Record<string, Service> = {}; servicesArr.forEach((s) => { m[s.id] = s; }); return m; }, [servicesArr]);
 
   // Fetch AI tips for the first vehicle once it loads
   useEffect(() => {
