@@ -42,7 +42,7 @@ const EmployeeInventoryCheck = () => {
       .eq("id", item.id);
     setBusy(null);
     if (error) {
-      setOptimistic((prev) => { const next = { ...prev }; delete next[item.id]; return next; });
+      setOptimistic((prev) => { const { [item.id]: _, ...next } = prev; return next; });
       toast.error(error.message);
     } else {
       toast.success(`Used 1 × ${item.name}`);

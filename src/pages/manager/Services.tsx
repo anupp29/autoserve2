@@ -64,7 +64,7 @@ const ManagerServices = () => {
     setOptimistic((prev) => ({ ...prev, [s.id]: { ...prev[s.id], active: newActive } }));
     const { error } = await supabase.from("services").update({ active: newActive }).eq("id", s.id);
     if (error) {
-      setOptimistic((prev) => { const next = { ...prev }; delete next[s.id]; return next; });
+      setOptimistic((prev) => { const { [s.id]: _, ...next } = prev; return next; });
       toast.error(error.message);
     } else {
       toast.success(`${s.name} ${newActive ? "activated" : "deactivated"}`);

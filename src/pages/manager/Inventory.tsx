@@ -78,7 +78,7 @@ const ManagerInventory = () => {
     setOptimistic((prev) => ({ ...prev, [i.id]: { ...prev[i.id], quantity: target } }));
     const { error } = await supabase.from("inventory").update({ quantity: target }).eq("id", i.id);
     if (error) {
-      setOptimistic((prev) => { const next = { ...prev }; delete next[i.id]; return next; });
+      setOptimistic((prev) => { const { [i.id]: _, ...next } = prev; return next; });
       toast.error(error.message);
     } else {
       toast.success(`Restocked ${i.name} to ${target}`);

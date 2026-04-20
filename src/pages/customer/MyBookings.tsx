@@ -74,7 +74,7 @@ const CustomerBookings = () => {
     setOptimistic((prev) => ({ ...prev, [id]: { ...prev[id], status: "cancelled" } }));
     const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id);
     if (error) {
-      setOptimistic((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      setOptimistic((prev) => { const { [id]: _, ...next } = prev; return next; });
       toast.error(error.message);
     } else {
       toast.success("Booking cancelled");
