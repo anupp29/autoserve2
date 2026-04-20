@@ -43,7 +43,7 @@ export function useProfilesByRole(role?: "manager" | "employee" | "customer") {
     };
     load();
     const channel = supabase
-      .channel(`staff-${role ?? "all"}-${Math.random().toString(36).slice(2)}`)
+      .channel(`staff-${role ?? "all"}-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { if (!cancelled) load(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => { if (!cancelled) load(); })
       .subscribe();
