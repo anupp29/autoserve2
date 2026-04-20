@@ -10,7 +10,8 @@ export interface StaffProfile {
 
 /**
  * Fetches profiles + their roles, returns a map and array.
- * Used to enrich bookings/history rows with names since there are no FKs to auth.users.
+ * Subscribes to realtime changes on profiles and user_roles so the list
+ * auto-updates whenever a new employee is added or a role changes.
  */
 export function useProfilesByRole(role?: "manager" | "employee" | "customer") {
   const [profiles, setProfiles] = useState<StaffProfile[]>([]);
@@ -41,7 +42,15 @@ export function useProfilesByRole(role?: "manager" | "employee" | "customer") {
       setLoading(false);
     };
     load();
-    return () => { cancelled = true; };
+    const channel = supabase
+      .channel(`staff-${role ?? "all"}-${crypto.randomUUID()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { if (!cancelled) load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => { if (!cancelled) load(); })
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [role]);
 
   return { profiles, byId, loading };

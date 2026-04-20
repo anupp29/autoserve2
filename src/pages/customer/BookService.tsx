@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, Car, Clock, Loader2, AlertCircle, Wrench, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/format";
@@ -25,9 +26,6 @@ const BookService = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const [services, setServices] = useState<Service[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [date, setDate] = useState(todayPlus(2));
@@ -37,17 +35,16 @@ const BookService = () => {
   const [busy, setBusy] = useState(false);
   const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
 
+  const { data: services, loading: servicesLoading } = useLiveTable<Service>("services", (q) => q.eq("active", true).order("category"));
+  const { data: vehicles, loading: vehiclesLoading } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? "").order("created_at", { ascending: false }), [user?.id], { enabled: !!user });
+  const loading = servicesLoading || vehiclesLoading;
+
+  // Auto-select the first vehicle once vehicles are loaded
   useEffect(() => {
-    Promise.all([
-      supabase.from("services").select("*").eq("active", true).order("category"),
-      supabase.from("vehicles").select("*").eq("owner_id", user?.id ?? "").order("created_at", { ascending: false }),
-    ]).then(([s, v]) => {
-      setServices((s.data as Service[]) ?? []);
-      setVehicles((v.data as Vehicle[]) ?? []);
-      if (v.data && v.data.length > 0) setSelectedVehicle(v.data[0].id);
-      setLoading(false);
-    });
-  }, [user?.id]);
+    if (vehicles.length > 0 && !selectedVehicle) {
+      setSelectedVehicle(vehicles[0].id);
+    }
+  }, [vehicles, selectedVehicle]);
 
   const toggleService = (id: string) => {
     setSelectedIds((prev) => {

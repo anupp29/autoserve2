@@ -1,5 +1,5 @@
 // Customer bookings list with QR pass buttons (drop-off + pick-up).
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Calendar, MapPin, CheckCircle, Loader2, AlertCircle, QrCode, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,21 +41,14 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
 const CustomerBookings = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("All");
-  const [vehicles, setVehicles] = useState<Record<string, Vehicle>>({});
-  const [services, setServices] = useState<Record<string, Service>>({});
   const [qr, setQr] = useState<{ id: string; type: "dropoff" | "pickup" } | null>(null);
 
   const { data: bookings, loading } = useLiveTable<Booking>("bookings", (q) => q.eq("customer_id", user?.id ?? "").order("scheduled_at", { ascending: false }), [user?.id], { enabled: !!user });
+  const { data: vehiclesArr } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? ""), [user?.id], { enabled: !!user });
+  const { data: servicesArr } = useLiveTable<Service>("services", (q) => q);
 
-  useEffect(() => {
-    Promise.all([
-      supabase.from("vehicles").select("id,make,model,registration").eq("owner_id", user?.id ?? ""),
-      supabase.from("services").select("id,name,duration_minutes"),
-    ]).then(([v, s]) => {
-      const vmap: Record<string, Vehicle> = {}; (v.data ?? []).forEach((x: any) => vmap[x.id] = x); setVehicles(vmap);
-      const smap: Record<string, Service> = {}; (s.data ?? []).forEach((x: any) => smap[x.id] = x); setServices(smap);
-    });
-  }, [user?.id]);
+  const vehicles = useMemo(() => { const m: Record<string, Vehicle> = {}; vehiclesArr.forEach((v) => { m[v.id] = v; }); return m; }, [vehiclesArr]);
+  const services = useMemo(() => { const m: Record<string, Service> = {}; servicesArr.forEach((s) => { m[s.id] = s; }); return m; }, [servicesArr]);
 
   const filtered = bookings.filter((b) => {
     if (tab === "All") return true;
