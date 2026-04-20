@@ -49,8 +49,8 @@ describe("PRIORITY_MULTIPLIER", () => {
 
   it("computes correct surcharge for ₹10,000", () => {
     const base = 10000;
-    expect(base * (PRIORITY_MULTIPLIER.express - 1)).toBe(1500);
-    expect(base * (PRIORITY_MULTIPLIER.priority - 1)).toBe(3000);
+    expect(base * (PRIORITY_MULTIPLIER.express - 1)).toBeCloseTo(1500);
+    expect(base * (PRIORITY_MULTIPLIER.priority - 1)).toBeCloseTo(3000);
   });
 });
 
