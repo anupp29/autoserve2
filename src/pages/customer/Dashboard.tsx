@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
-import { Car, Calendar, MapPin, CheckCircle, Clock, Wrench, ArrowRight, Plus, Activity } from "lucide-react";
+import { Car, Calendar, MapPin, Wrench, ArrowRight, Plus, Activity, Sparkles, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { formatINR, formatDateTime, formatDate } from "@/lib/format";
+import VehicleBrandLogo from "@/components/VehicleBrandLogo";
 
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; mileage: number; color: string | null; fuel_type: string | null; }
 interface Booking { id: string; scheduled_at: string; status: string; priority: string; total_cost: number | null; vehicle_id: string; service_id: string; }
@@ -24,6 +25,7 @@ const statusBadge = (s: string) => {
 const CustomerDashboard = () => {
   const { user, profile } = useAuth();
   const [services, setServices] = useState<Record<string, Service>>({});
+  const [tips, setTips] = useState<{ loading: boolean; items: string[] | null; vehicle: Vehicle | null }>({ loading: false, items: null, vehicle: null });
 
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? "").order("created_at", { ascending: false }), [user?.id], { enabled: !!user });
   const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q.eq("customer_id", user?.id ?? "").order("scheduled_at", { ascending: true }), [user?.id], { enabled: !!user });
@@ -37,8 +39,22 @@ const CustomerDashboard = () => {
     });
   }, []);
 
+  // Fetch AI tips for the first vehicle once it loads
+  useEffect(() => {
+    const v = vehicles[0];
+    if (!v || tips.vehicle?.id === v.id) return;
+    setTips({ loading: true, items: null, vehicle: v });
+    supabase.functions
+      .invoke("ai-maintenance-tips", { body: { make: v.make, model: v.model, year: v.year, mileage: v.mileage, fuel_type: v.fuel_type } })
+      .then(({ data, error }) => {
+        if (error) setTips({ loading: false, items: null, vehicle: v });
+        else setTips({ loading: false, items: data?.tips ?? [], vehicle: v });
+      })
+      .catch(() => setTips({ loading: false, items: null, vehicle: v }));
+  }, [vehicles, tips.vehicle?.id]);
+
   const vehicleById = Object.fromEntries(vehicles.map((v) => [v.id, v]));
-  const upcoming = bookings.filter((b) => ["pending", "confirmed", "in_progress"].includes(b.status));
+  const upcoming = bookings.filter((b) => ["pending", "confirmed", "checked_in", "in_progress", "ready_for_pickup"].includes(b.status));
   const nextBooking = upcoming[0];
 
   const firstName = profile?.full_name?.split(" ")[0] || "there";
@@ -59,7 +75,7 @@ const CustomerDashboard = () => {
           {vehicles.slice(0, 4).map((v) => (
             <Link to="/customer/vehicles" key={v.id} className="bg-card p-5 rounded-xl border border-border/20 shadow-sm hover:shadow-md hover:border-primary/20 transition-all group">
               <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors"><Car className="w-5 h-5 text-primary" /></div>
+                <VehicleBrandLogo make={v.make} size={40} />
                 <span className="text-[10px] font-mono text-muted-foreground">{v.registration}</span>
               </div>
               <h3 className="font-bold text-on-surface">{v.year} {v.make} {v.model}</h3>
@@ -109,6 +125,37 @@ const CustomerDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* AI Maintenance Tips */}
+      {tips.vehicle && (
+        <div className="bg-gradient-to-br from-primary/5 via-card to-card p-6 rounded-xl border border-primary/20 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10"><Sparkles className="w-5 h-5 text-primary" /></div>
+              <div>
+                <h3 className="font-bold text-on-surface">AI Maintenance Recommendations</h3>
+                <p className="text-xs text-muted-foreground">Personalised for your {tips.vehicle.year} {tips.vehicle.make} {tips.vehicle.model}</p>
+              </div>
+            </div>
+            <Link to="/customer/book" className="text-xs font-bold text-primary hover:underline self-start sm:self-auto">Book a service →</Link>
+          </div>
+          {tips.loading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4"><Loader2 className="w-4 h-4 animate-spin" /> Analysing your vehicle history…</div>
+          )}
+          {!tips.loading && tips.items && tips.items.length > 0 && (
+            <ul className="grid sm:grid-cols-2 gap-2.5">
+              {tips.items.slice(0, 4).map((t, i) => (
+                <li key={i} className="text-sm text-on-surface flex gap-2 p-3 rounded-lg bg-card border border-border/20">
+                  <span className="text-primary font-bold">{i + 1}.</span> {t}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!tips.loading && (!tips.items || tips.items.length === 0) && (
+            <p className="text-sm text-muted-foreground">No tips available right now. Try again from the Vehicles page.</p>
+          )}
+        </div>
+      )}
 
       {/* History & quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
