@@ -187,6 +187,59 @@ const EmployeeJobDetail = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* AI Vehicle History Briefing */}
+          <div className="bg-gradient-to-br from-primary/5 to-tertiary/5 p-6 rounded-xl border border-primary/20 shadow-sm">
+            <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <h3 className="font-bold text-on-surface">AI Vehicle Briefing</h3>
+              </div>
+              <button
+                onClick={generateSummary}
+                disabled={aiBusy || !vehicle}
+                className="text-xs font-bold text-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 hover:bg-primary/10 transition-colors disabled:opacity-50"
+              >
+                {aiBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : aiSummary ? <RefreshCw className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {aiSummary ? "Regenerate" : "Generate Summary"}
+              </button>
+            </div>
+            {!aiSummary && !aiBusy && (
+              <p className="text-xs text-muted-foreground">Get an AI-generated handover briefing of this vehicle's full service history — recurring issues, parts replaced, and what to inspect next.</p>
+            )}
+            {aiBusy && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" /> Reviewing service history…
+              </div>
+            )}
+            {aiSummary && (
+              <div className="space-y-3 mt-2">
+                <p className="text-sm text-on-surface leading-relaxed">{aiSummary.summary}</p>
+                {aiSummary.highlights?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Highlights</p>
+                    <ul className="text-xs text-on-surface space-y-1 list-disc pl-5">
+                      {aiSummary.highlights.map((h, i) => <li key={i}>{h}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {aiSummary.watchpoints?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1.5">Inspect Next</p>
+                    <ul className="text-xs text-on-surface space-y-1 list-disc pl-5">
+                      {aiSummary.watchpoints.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {aiSummary.next_due && (
+                  <div className="bg-card border border-border/20 rounded-lg p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">Likely Due Next</p>
+                    <p className="text-xs font-bold text-on-surface">{aiSummary.next_due}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="bg-card p-6 rounded-xl border border-border/20 shadow-sm">
             <h3 className="font-bold text-on-surface mb-4">Service Details</h3>
             <div className="grid sm:grid-cols-2 gap-4">
