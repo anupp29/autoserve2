@@ -2,30 +2,62 @@
 
 Production-grade, three-portal automotive workshop platform tailored for the **Indian market** (₹ INR pricing, Maruti/Tata/Mahindra fleet, Gurugram operations).
 
-Built on **React 18 + Vite + TypeScript + Tailwind**, backed by **Lovable Cloud** (Supabase: Postgres, Auth, RLS, Realtime, Edge Functions) and **Lovable AI Gateway** (Gemini 2.5 Flash).
+Built on **React 18 + Vite + TypeScript + Tailwind**, backed by **Supabase** (Postgres, Auth, RLS, Realtime, Edge Functions) and **Lovable AI Gateway** (Gemini 2.5 Flash).
 
 ---
 
-## ✨ Highlights
+## Prerequisites
 
-| Capability | Detail |
-|---|---|
-| **3 Role-based portals** | Manager · Employee (Technician) · Customer — distinct sidebars, dashboards, RLS scopes |
-| **End-to-end booking lifecycle** | `pending → confirmed → checked_in → in_progress → ready_for_pickup → completed → released` |
-| **QR drop-off / pick-up** | Auto-generated `DROP-XXXXXXXX` and `PICK-XXXXXXXX` codes per booking + scanner page |
-| **AI Assistant** | Conversational chat grounded in the customer's own vehicles + catalogue |
-| **AI Diagnostics** | Symptom → probable cause → recommended service mapping |
-| **AI Maintenance Tips** | Per-vehicle recommendations on the dashboard + vehicles page |
-| **AI Vehicle History Summary** | Technician one-click brief on past work |
-| **AI Resale Valuation** | Indian used-car market estimate (CarDekho/Cars24-calibrated) |
-| **Multi-service bookings** | Pick several services, related-service suggestions, priority surcharge (Normal / Express +15% / Priority +30%) |
-| **Auto service-history** | Database trigger creates `service_history` rows the moment a booking hits `completed`/`released` |
-| **Realtime everything** | All CRUD updates propagate instantly via Supabase Realtime — no manual refresh |
-| **Manager-issued staff accounts** | Managers create employees via `admin-create-employee` edge function (customers self-signup only) |
+- [Node.js](https://nodejs.org/) **v18 or higher**
+- [npm](https://www.npmjs.com/) (comes with Node.js)
+- Git
 
 ---
 
-## 🔐 Default Demo Accounts
+## Installation & Running Locally
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/anupp29/autoserve2.git
+cd autoserve2
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure environment variables
+
+Create a `.env` file in the project root with the following values:
+
+```env
+VITE_SUPABASE_URL="https://vlktrhfqjsbnmomrwthj.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsa3RyaGZxanNibm1vbXJ3dGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Nzc5NTcsImV4cCI6MjA5MjE1Mzk1N30.RnGDg9ZlX2vsk0JhSHZ3oXKquRKGVYkcpV_aUlPjfGk"
+VITE_SUPABASE_PROJECT_ID="vlktrhfqjsbnmomrwthj"
+```
+
+> These values are already present in the `.env` file if you cloned the repo. No further changes are needed for local development.
+
+### 4. Start the development server
+
+```bash
+npm run dev
+```
+
+The app is now running at **http://localhost:8080**
+
+### 5. Open the app
+
+Go to [http://localhost:8080](http://localhost:8080) in your browser. You will be greeted with the AutoServe sign-in page.
+
+---
+
+## Demo Accounts
+
+Use these pre-seeded accounts to explore all three portals:
 
 | Role | Email | Password |
 |---|---|---|
@@ -35,11 +67,92 @@ Built on **React 18 + Vite + TypeScript + Tailwind**, backed by **Lovable Cloud*
 
 ---
 
-## 🏗️ Architecture
+## End-to-End Workflow
+
+### As a Customer
+
+1. Sign in with `customer@autoserve.in` / `autoserve@123`
+2. Go to **My Vehicles** → Add a vehicle (make, model, year, registration)
+3. Go to **Book a Service** → Select your vehicle → Choose one or more services → Set priority (Normal / Express / Priority) → Confirm booking
+4. Go to **My Bookings** to view the booking status and QR drop-off code
+5. Use the **AI Assistant** (chat) to ask questions about your vehicle or services
+6. Use **AI Diagnostics** to describe symptoms and get service recommendations
+7. Use **AI Resale Valuation** to get a market estimate for your vehicle
+
+### As an Employee (Technician)
+
+1. Sign in with `employee@autoserve.in` / `autoserve@123`
+2. Go to **Job Queue** to see bookings assigned to you
+3. Open a booking → Click **Check In** → Update status through `in_progress → ready_for_pickup → completed`
+4. Go to **QR Scanner** (`/staff/scan`) → Scan customer QR codes for drop-off and pick-up
+5. Use **AI Vehicle Summary** to get a one-click brief of a vehicle's service history
+6. Go to **Inventory** to view parts stock and reorder levels
+
+### As a Manager
+
+1. Sign in with `manager@autoserve.in` / `autoserve@123`
+2. Go to **Bookings** → View all bookings, assign them to technicians, update statuses
+3. Go to **Services** → Add, edit, or remove services from the catalogue (name, category, price, duration)
+4. Go to **Inventory** → Track parts stock, update quantities, set reorder thresholds
+5. Go to **Reports** → View revenue, booking counts, and technician performance
+6. Go to **Create Employee** → Provision a new technician account (uses the `admin-create-employee` edge function)
+
+---
+
+## Other Commands
+
+```bash
+npm run build       # Production build (outputs to dist/)
+npm run preview     # Preview the production build locally
+npm test            # Run all unit tests (vitest)
+npm run lint        # Run ESLint
+```
+
+---
+
+## Running Tests
+
+```bash
+npm test
+```
+
+This runs 35 unit tests across:
+
+- `src/lib/format.test.ts` — currency formatting, dates, time-ago, initials
+- `src/lib/recommendations.test.ts` — related-service suggestions, priority pricing
+- `src/lib/brandLogos.test.ts` — Indian car brand logo resolution
+- `src/lib/bookingLifecycle.test.ts` — status classification, total-cost math
+
+All 35 tests pass. See [`TEST_CASES.md`](./TEST_CASES.md) for the full test matrix.
+
+---
+
+## Project Structure
+
+```
+autoserve2/
+├── src/
+│   ├── components/       # Reusable UI components
+│   ├── pages/            # Route-level pages (manager, employee, customer)
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities and business logic
+│   └── integrations/     # Supabase client and types
+├── supabase/
+│   ├── functions/        # Deno Edge Functions
+│   └── migrations/       # Database migrations (SQL)
+├── public/               # Static assets
+├── index.html
+├── vite.config.ts
+└── package.json
+```
+
+---
+
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  React SPA (Vite)                                            │
+│  React SPA (Vite · http://localhost:8080)                    │
 │  ├ /manager/*    Bookings · Services · Inventory · Reports    │
 │  ├ /employee/*   Queue · Job · Inventory · Performance        │
 │  ├ /customer/*   Vehicles · Book · Bookings · AI Assistant    │
@@ -48,13 +161,11 @@ Built on **React 18 + Vite + TypeScript + Tailwind**, backed by **Lovable Cloud*
                           │ supabase-js
                           ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  Lovable Cloud  (Supabase Postgres + Auth + Storage + RT)    │
+│  Supabase  (Postgres + Auth + Realtime + Edge Functions)     │
 │  ├ tables       profiles · user_roles · vehicles · services   │
-│  │              bookings · service_history · inventory ·      │
+│  │              bookings · service_history · inventory        │
 │  │              service_reminders · notifications             │
-│  ├ enums        app_role · booking_status · booking_priority  │
 │  ├ triggers     gen_booking_codes · create_history_on_completion │
-│  ├ functions    has_role · get_user_role                      │
 │  └ RLS          per-table, role-aware via has_role()          │
 └──────────────────────────────────────────────────────────────┘
                           │ supabase.functions.invoke
@@ -76,76 +187,27 @@ Built on **React 18 + Vite + TypeScript + Tailwind**, backed by **Lovable Cloud*
 
 ---
 
-## 🗃️ Data Model (high-level)
+## Booking Lifecycle
 
-| Table | Purpose | Key fields |
-|---|---|---|
-| `profiles` | Per-user display info | `user_id`, `full_name`, `phone` |
-| `user_roles` | Role assignment (avoids privilege escalation) | `user_id`, `role` (`manager`/`employee`/`customer`) |
-| `vehicles` | Customer vehicles | `owner_id`, `make`, `model`, `year`, `registration`, `mileage`, `fuel_type` |
-| `services` | Service catalogue | `name`, `category`, `price`, `duration_minutes` |
-| `bookings` | Lifecycle row | `customer_id`, `vehicle_id`, `service_id`, `extra_service_ids`, `assigned_to`, `status`, `priority`, `dropoff_code`, `pickup_code`, `total_cost` |
-| `service_history` | Completed work log | `booking_id`, `technician_id`, `cost`, `parts_used` |
-| `inventory` | Parts on hand | `sku`, `quantity`, `reorder_level` |
-| `notifications` | In-app alerts | `user_id`, `title`, `message`, `read` |
-
-All tables have **RLS enabled**. Role checks go through the `SECURITY DEFINER has_role()` function — no recursive policies.
-
----
-
-## 🧪 Testing
-
-```bash
-npm test            # vitest run
+```
+pending → confirmed → checked_in → in_progress → ready_for_pickup → completed → released
 ```
 
-Unit suites:
-
-- `src/lib/format.test.ts` — currency, dates, time-ago, initials (10 cases)
-- `src/lib/recommendations.test.ts` — related services, priority pricing (9 cases)
-- `src/lib/brandLogos.test.ts` — Indian-brand logo resolution (5 cases)
-- `src/lib/bookingLifecycle.test.ts` — status classification + total-cost math (10 cases)
-
-**Total: 35 tests, all passing.** See [`TEST_CASES.md`](./TEST_CASES.md) for the full input → expected → actual matrix (including manual E2E steps and edge-function smoke tests).
+Each transition is triggered manually by the assigned technician or manager. A database trigger automatically creates a `service_history` record when a booking reaches `completed` or `released`.
 
 ---
 
-## 🚀 Local Development
+## Key Features
 
-```bash
-npm install
-npm run dev         # http://localhost:8080
-npm test            # vitest
-```
-
-Environment variables (`.env`, auto-managed):
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_PROJECT_ID`
-
-Server-side secrets (managed in Lovable Cloud — never exposed to the browser):
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `LOVABLE_API_KEY` (AI Gateway)
-
----
-
-## 📜 Notable Constraints (from product memory)
-
-- **Slate Precision** design system, industrial-mesh background, **Lucide icons only** (no emojis)
-- All currency in **₹ INR** with Indian grouping (`1,25,000`)
-- Brand list curated to the Indian market (Maruti Suzuki, Tata, Mahindra, Hyundai, …)
-- No "Enterprise SSO" option — workshop tooling, not a SaaS gateway
-- Custom AutoServe SVG logo — no platform branding ever shown
-
----
-
-## 📈 Production Readiness Checklist
-
-- ✅ RLS on all tables · linter clean · no recursive policies
-- ✅ Unique role-aware sign-in (manager / employee / customer)
-- ✅ All AI endpoints handle 429/402/error states gracefully
-- ✅ Realtime subscriptions on every CRUD surface — zero manual refresh
-- ✅ DB trigger guarantees `service_history` accuracy
-- ✅ Mobile-responsive booking flow
-- ✅ 35 passing unit tests
-- ✅ Zero `console.error` in dev-server logs
+| Feature | Description |
+|---|---|
+| 3 role-based portals | Manager, Employee, Customer — separate dashboards and permissions |
+| QR drop-off / pick-up | Auto-generated codes per booking; scanner at `/staff/scan` |
+| AI Assistant | Customer chat grounded in their own vehicles and service catalogue |
+| AI Diagnostics | Symptom → probable cause → recommended service |
+| AI Maintenance Tips | Per-vehicle recommendations |
+| AI Vehicle History Summary | One-click brief for technicians |
+| AI Resale Valuation | Indian used-car market estimate |
+| Multi-service bookings | Select multiple services with priority surcharges (+15% Express, +30% Priority) |
+| Realtime updates | All changes propagate instantly via Supabase Realtime |
+| Manager staff provisioning | Managers create employee accounts via edge function |

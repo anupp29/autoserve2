@@ -1,4 +1,4 @@
-// Production AI assistant with chat persistence (localStorage), DB grounding, and real Lovable AI calls.
+// Production AI assistant with chat persistence (localStorage), DB grounding, and real AI calls.
 // Note: Booking creation is intentionally NOT done here — to avoid the "no customer_id linked" bug. The
 // assistant guides the user to the Book Service page instead.
 import { useEffect, useRef, useState } from "react";
@@ -104,7 +104,7 @@ const AIAssistant = () => {
             <h1 className="text-lg font-bold text-on-surface">AutoServe AI Assistant</h1>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Powered by Lovable AI · {vehicles.length} vehicle{vehicles.length === 1 ? "" : "s"} on file</p>
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Powered by AutoServe AI · {vehicles.length} vehicle{vehicles.length === 1 ? "" : "s"} on file</p>
         </div>
         {messages.length > 0 && (
           <button onClick={clear} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1.5 p-2 rounded-lg hover:bg-surface-container">
