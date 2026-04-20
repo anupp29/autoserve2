@@ -1,6 +1,56 @@
 # AutoServe — Test Cases Matrix
 
 Last verified: 2026-04-20 · Status: **35/35 unit tests pass · all edge functions return 200 · trigger verified**
+> Bug found & fixed: `initials("  ")` returned `""` → now correctly returns `"?"` — see §F below.
+
+---
+
+## ⚠️ F. Bug Found & Fixed — Expected ≠ Actual
+
+### Bug: `initials()` returned `""` for whitespace-only strings
+
+**Function:** `src/lib/format.ts → initials(name)`
+
+**Description:**  
+The `initials()` helper extracts up to two initial letters from a display name.
+The guard `if (!name) return "?"` correctly handles `null`, `undefined`, and `""`.
+However, a string containing only spaces (e.g. `"  "`) is **truthy** in JavaScript,
+so the guard was bypassed — resulting in an empty string `""` instead of the fallback `"?"`.
+
+| Input | Expected | Actual (before fix) | Actual (after fix) |
+|---|---|---|---|
+| `"  "` (two spaces) | `"?"` | `""` ❌ | `"?"` ✅ |
+| `null` | `"?"` | `"?"` | `"?"` ✅ |
+| `""` | `"?"` | `"?"` | `"?"` ✅ |
+| `"Aarav Kapoor"` | `"AK"` | `"AK"` | `"AK"` ✅ |
+
+**Root cause:**  
+`"  ".split(" ").filter(Boolean)` yields an empty array `[]`, so the `.map()` + `.join("")` pipeline returns `""`.
+The early-return guard only checked for falsy values, missing non-empty-but-blank strings.
+
+**Fix applied (`src/lib/format.ts`):**
+
+```diff
+-  if (!name) return "?";
+-  return name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]).join("").toUpperCase();
++  if (!name) return "?";
++  const parts = name.split(" ").filter(Boolean);
++  if (parts.length === 0) return "?";    // ← catches whitespace-only strings
++  return parts.slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+```
+
+**Test added (`src/lib/format.test.ts`):**
+
+```ts
+it("returns ? for empty input", () => {
+  expect(initials(null)).toBe("?");
+  expect(initials("")).toBe("?");
+  expect(initials("  ")).toBe("?");   // ← new assertion, was failing before fix
+});
+```
+
+The assertion `expect(initials("  ")).toBe("?")` failed with `expected "" to be "?"` before the fix
+and passes after.
 
 ---
 
