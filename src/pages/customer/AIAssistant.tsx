@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Loader2, Sparkles, Car, Bot, User as UserIcon } from "lucide-react";
+import { Send, Loader2, Sparkles, Car, Bot, User as UserIcon, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface Msg { role: "user" | "assistant"; content: string; }
+
+const STORAGE_KEY = "autoserve.ai-assistant.history.v1";
 
 const SUGGESTIONS = [
   "When is my next service due?",
@@ -14,8 +16,15 @@ const SUGGESTIONS = [
 ];
 
 const AIAssistant = () => {
-  const { profile } = useAuth();
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const { profile, user } = useAuth();
+  const userKey = user?.id ? `${STORAGE_KEY}.${user.id}` : STORAGE_KEY;
+  const [messages, setMessages] = useState<Msg[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem(userKey);
+      return raw ? (JSON.parse(raw) as Msg[]) : [];
+    } catch { return []; }
+  });
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -23,6 +32,18 @@ const AIAssistant = () => {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
+
+  // Persist chat history per-user
+  useEffect(() => {
+    try {
+      localStorage.setItem(userKey, JSON.stringify(messages.slice(-50)));
+    } catch { /* quota — ignore */ }
+  }, [messages, userKey]);
+
+  const clearChat = () => {
+    setMessages([]);
+    try { localStorage.removeItem(userKey); } catch { /* ignore */ }
+  };
 
   const send = async (text: string) => {
     if (!text.trim() || busy) return;
@@ -55,9 +76,16 @@ const AIAssistant = () => {
           </div>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">Powered by Gemini · Knows your vehicles & history</p>
         </div>
-        <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-surface-container rounded-lg border border-border/20">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-on-surface">{profile?.full_name?.split(" ")[0] || "Customer"}</span>
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <button onClick={clearChat} title="Clear chat" className="p-2 rounded-lg border border-border/20 hover:bg-surface-container transition-colors text-muted-foreground hover:text-destructive">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-surface-container rounded-lg border border-border/20">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-on-surface">{profile?.full_name?.split(" ")[0] || "Customer"}</span>
+          </div>
         </div>
       </div>
 

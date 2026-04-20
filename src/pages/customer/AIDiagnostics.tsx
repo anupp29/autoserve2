@@ -141,6 +141,7 @@ const AIDiagnostics = () => {
                       </div>
                       <Link
                         to="/customer/book"
+                        state={{ preselectServiceName: f.recommended_service, preselectVehicleId: selectedVeh }}
                         className="w-full py-2 border border-border/30 rounded-lg text-xs font-bold text-on-surface hover:bg-surface-container hover:border-primary/30 transition-all flex items-center justify-center"
                       >
                         Book: {f.recommended_service}
