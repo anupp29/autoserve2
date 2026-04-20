@@ -1,4 +1,4 @@
-// Production resale value predictor — uses Lovable AI on real customer vehicles, returns INR estimates.
+// Production resale value predictor — uses AutoServe AI on real customer vehicles, returns INR estimates.
 import { useEffect, useState } from "react";
 import { RefreshCw, CheckCircle, AlertTriangle, Car, Shield, Loader2, TrendingDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
