@@ -188,16 +188,16 @@ const BookService = () => {
             </div>
           )}
 
-          <div className="sticky bottom-4 z-10">
-            <div className="bg-card border border-border/30 shadow-xl rounded-xl p-4 flex items-center justify-between gap-4">
+          <div className="sticky bottom-2 sm:bottom-4 z-10">
+            <div className="bg-card border border-border/30 shadow-xl rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{selectedIds.size} service{selectedIds.size === 1 ? "" : "s"} selected</p>
-                <p className="text-lg font-black font-mono text-on-surface">{formatINR(subtotal)}</p>
+                <p className="text-base sm:text-lg font-black font-mono text-on-surface">{formatINR(subtotal)}</p>
               </div>
               <button
                 disabled={selectedIds.size === 0}
                 onClick={() => setStep(1)}
-                className="bg-primary text-primary-foreground px-6 py-3 rounded-lg text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto bg-primary text-primary-foreground px-5 sm:px-6 py-3 rounded-lg text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
               >
                 Next: Choose Vehicle →
               </button>

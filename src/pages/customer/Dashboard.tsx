@@ -75,7 +75,7 @@ const CustomerDashboard = () => {
           {vehicles.slice(0, 4).map((v) => (
             <Link to="/customer/vehicles" key={v.id} className="bg-card p-5 rounded-xl border border-border/20 shadow-sm hover:shadow-md hover:border-primary/20 transition-all group">
               <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors"><Car className="w-5 h-5 text-primary" /></div>
+                <VehicleBrandLogo make={v.make} size={40} />
                 <span className="text-[10px] font-mono text-muted-foreground">{v.registration}</span>
               </div>
               <h3 className="font-bold text-on-surface">{v.year} {v.make} {v.model}</h3>
