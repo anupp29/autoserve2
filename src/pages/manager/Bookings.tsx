@@ -65,9 +65,40 @@ const ManagerBookings = () => {
   };
 
   const updateStatus = async (b: Booking, status: string) => {
-    const { error } = await supabase.from("bookings").update({ status: status as any }).eq("id", b.id);
-    if (error) toast.error(error.message);
-    else toast.success(`Status → ${status.replace("_", " ")}`);
+    const patch: Record<string, unknown> = { status };
+    if (status === "completed" && !b.assigned_to) {
+      // can't auto-record history without a technician — still allow status change
+    }
+    const { error } = await supabase.from("bookings").update(patch as never).eq("id", b.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Status → ${status.replace("_", " ")}`);
+
+    // When the manager flips status to completed, auto-write service_history
+    // (mirrors the technician's JobDetail flow) so the Performance & Revenue stats stay in sync.
+    if (status === "completed") {
+      const svc = services.find((s) => s.id === b.service_id);
+      const { data: existing } = await supabase
+        .from("service_history")
+        .select("id")
+        .eq("booking_id", b.id)
+        .maybeSingle();
+      if (!existing) {
+        await supabase.from("service_history").insert({
+          booking_id: b.id,
+          customer_id: b.customer_id,
+          vehicle_id: b.vehicle_id,
+          service_id: b.service_id,
+          technician_id: b.assigned_to,
+          cost: b.total_cost ?? svc?.['price' as keyof typeof svc] ?? 0,
+        } as never);
+      }
+      await supabase.from("notifications").insert({
+        user_id: b.customer_id,
+        title: "Service Completed",
+        message: `Your booking #${b.id.slice(0, 6).toUpperCase()} has been marked completed.`,
+        type: "success",
+      });
+    }
   };
 
   const counts = {

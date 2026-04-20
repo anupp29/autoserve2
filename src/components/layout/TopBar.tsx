@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Settings, Wrench, Calendar, AlertTriangle, Info, CheckCircle2, LogOut, User } from "lucide-react";
+import { Bell, Settings, AlertTriangle, Info, CheckCircle2, LogOut, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
@@ -91,127 +91,117 @@ const TopBar = () => {
   const userRole = role ? role.charAt(0).toUpperCase() + role.slice(1) : "";
 
   return (
-    <div className="flex items-center justify-between w-full">
-      <div className="relative hidden md:block">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <input
-          type="text"
-          placeholder="Search..."
-          className="pl-10 pr-4 py-2 bg-surface-container rounded-xl border-none text-sm w-64 focus:ring-2 focus:ring-primary/20 transition-all outline-none placeholder:text-muted-foreground"
-        />
-      </div>
-      <div className="flex items-center gap-2 ml-auto">
-        {/* Notifications */}
-        <div className="relative" ref={notifRef}>
-          <button
-            onClick={() => { setShowNotifications(!showNotifications); setShowSettings(false); setShowProfile(false); }}
-            className="p-2 text-muted-foreground hover:bg-surface-container rounded-full transition-colors relative"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </button>
-          {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-card rounded-xl shadow-xl border border-border/30 z-50 overflow-hidden animate-fade-in">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
-                <h4 className="text-sm font-bold text-on-surface">Notifications</h4>
-                {unreadCount > 0 && (
-                  <button onClick={markAllRead} className="text-[10px] font-bold text-primary uppercase tracking-wider hover:underline">
-                    Mark all read
+    <div className="flex items-center justify-end w-full gap-2">
+      {/* Notifications */}
+      <div className="relative" ref={notifRef}>
+        <button
+          onClick={() => { setShowNotifications(!showNotifications); setShowSettings(false); setShowProfile(false); }}
+          className="p-2 text-muted-foreground hover:bg-surface-container rounded-full transition-colors relative"
+          aria-label="Notifications"
+        >
+          <Bell className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+        {showNotifications && (
+          <div className="absolute right-0 top-full mt-2 w-80 bg-card rounded-xl shadow-xl border border-border/30 z-50 overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
+              <h4 className="text-sm font-bold text-on-surface">Notifications</h4>
+              {unreadCount > 0 && (
+                <button onClick={markAllRead} className="text-[10px] font-bold text-primary uppercase tracking-wider hover:underline">
+                  Mark all read
+                </button>
+              )}
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">No notifications yet</div>
+              ) : notifications.map((n) => {
+                const Icon = typeIcon(n.type);
+                return (
+                  <button
+                    key={n.id}
+                    onClick={() => !n.read && markRead(n.id)}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-surface-container-low transition-colors border-b border-border/10 last:border-b-0 ${!n.read ? "bg-primary/5" : ""}`}
+                  >
+                    <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${!n.read ? "bg-primary/10" : "bg-surface-container"}`}>
+                      <Icon className={`w-3.5 h-3.5 ${!n.read ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-on-surface">{n.title}</p>
+                      <p className="text-[11px] text-muted-foreground">{n.message}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{timeAgo(n.created_at)}</p>
+                    </div>
+                    {!n.read && <div className="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0" />}
                   </button>
-                )}
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-muted-foreground">No notifications yet</div>
-                ) : notifications.map((n) => {
-                  const Icon = typeIcon(n.type);
-                  return (
-                    <button
-                      key={n.id}
-                      onClick={() => !n.read && markRead(n.id)}
-                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-surface-container-low transition-colors border-b border-border/10 last:border-b-0 ${!n.read ? "bg-primary/5" : ""}`}
-                    >
-                      <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${!n.read ? "bg-primary/10" : "bg-surface-container"}`}>
-                        <Icon className={`w-3.5 h-3.5 ${!n.read ? "text-primary" : "text-muted-foreground"}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-on-surface">{n.title}</p>
-                        <p className="text-[11px] text-muted-foreground">{n.message}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{timeAgo(n.created_at)}</p>
-                      </div>
-                      {!n.read && <div className="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
+                );
+              })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
-        {/* Settings */}
-        <div className="relative" ref={settingsRef}>
-          <button
-            onClick={() => { setShowSettings(!showSettings); setShowNotifications(false); setShowProfile(false); }}
-            className="p-2 text-muted-foreground hover:bg-surface-container rounded-full transition-colors"
-            aria-label="Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-          {showSettings && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-card rounded-xl shadow-xl border border-border/30 z-50 overflow-hidden animate-fade-in">
-              <div className="px-4 py-3 border-b border-border/20">
-                <h4 className="text-sm font-bold text-on-surface">Quick Settings</h4>
-              </div>
-              <div className="p-2">
-                {[
-                  { label: "Email Notifications", desc: "Receive booking updates", defaultOn: true },
-                  { label: "SMS Alerts", desc: "Get urgent alerts via SMS", defaultOn: false },
-                  { label: "Marketing Updates", desc: "Latest offers & news", defaultOn: false },
-                ].map((s) => <SettingToggle key={s.label} {...s} />)}
-              </div>
+      {/* Settings */}
+      <div className="relative" ref={settingsRef}>
+        <button
+          onClick={() => { setShowSettings(!showSettings); setShowNotifications(false); setShowProfile(false); }}
+          className="p-2 text-muted-foreground hover:bg-surface-container rounded-full transition-colors"
+          aria-label="Settings"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+        {showSettings && (
+          <div className="absolute right-0 top-full mt-2 w-64 bg-card rounded-xl shadow-xl border border-border/30 z-50 overflow-hidden animate-fade-in">
+            <div className="px-4 py-3 border-b border-border/20">
+              <h4 className="text-sm font-bold text-on-surface">Quick Settings</h4>
             </div>
-          )}
-        </div>
+            <div className="p-2">
+              {[
+                { label: "Email Notifications", desc: "Receive booking updates", defaultOn: true },
+                { label: "SMS Alerts", desc: "Get urgent alerts via SMS", defaultOn: false },
+                { label: "Marketing Updates", desc: "Latest offers & news", defaultOn: false },
+              ].map((s) => <SettingToggle key={s.label} {...s} />)}
+            </div>
+          </div>
+        )}
+      </div>
 
-        {/* Profile */}
-        <div className="relative ml-2" ref={profileRef}>
-          <button
-            onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); setShowSettings(false); }}
-            className="flex items-center gap-2 hover:bg-surface-container-low rounded-lg px-2 py-1.5 transition-colors"
-          >
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold text-on-surface leading-tight">{userName}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.1em]">{userRole}</p>
+      {/* Profile */}
+      <div className="relative ml-2" ref={profileRef}>
+        <button
+          onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); setShowSettings(false); }}
+          className="flex items-center gap-2 hover:bg-surface-container-low rounded-lg px-2 py-1.5 transition-colors"
+        >
+          <div className="text-right hidden sm:block">
+            <p className="text-xs font-semibold text-on-surface leading-tight">{userName}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.1em]">{userRole}</p>
+          </div>
+          <div className="h-9 w-9 rounded-full bg-primary/10 border border-border overflow-hidden flex items-center justify-center">
+            <span className="text-sm font-bold text-primary">{initials(userName)}</span>
+          </div>
+        </button>
+        {showProfile && (
+          <div className="absolute right-0 top-full mt-2 w-56 bg-card rounded-xl shadow-xl border border-border/30 z-50 overflow-hidden animate-fade-in">
+            <div className="px-4 py-3 border-b border-border/20">
+              <p className="text-sm font-bold text-on-surface">{userName}</p>
+              <p className="text-[11px] text-muted-foreground">{user?.email}</p>
             </div>
-            <div className="h-9 w-9 rounded-full bg-primary/10 border border-border overflow-hidden flex items-center justify-center">
-              <span className="text-sm font-bold text-primary">{initials(userName)}</span>
+            <div className="p-2">
+              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container-low text-left text-sm text-on-surface">
+                <User className="w-4 h-4 text-muted-foreground" /> My Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-destructive/5 text-left text-sm text-destructive"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out
+              </button>
             </div>
-          </button>
-          {showProfile && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-card rounded-xl shadow-xl border border-border/30 z-50 overflow-hidden animate-fade-in">
-              <div className="px-4 py-3 border-b border-border/20">
-                <p className="text-sm font-bold text-on-surface">{userName}</p>
-                <p className="text-[11px] text-muted-foreground">{user?.email}</p>
-              </div>
-              <div className="p-2">
-                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container-low text-left text-sm text-on-surface">
-                  <User className="w-4 h-4 text-muted-foreground" /> My Profile
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-destructive/5 text-left text-sm text-destructive"
-                >
-                  <LogOut className="w-4 h-4" /> Sign Out
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
