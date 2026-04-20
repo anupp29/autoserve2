@@ -43,5 +43,7 @@ export const timeAgo = (date: string | Date): string => {
 
 export const initials = (name: string | null | undefined): string => {
   if (!name) return "?";
-  return name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length === 0) return "?";
+  return parts.slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 };

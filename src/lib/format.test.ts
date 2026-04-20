@@ -57,5 +57,6 @@ describe("initials", () => {
   it("returns ? for empty input", () => {
     expect(initials(null)).toBe("?");
     expect(initials("")).toBe("?");
+    expect(initials("  ")).toBe("?");
   });
 });
