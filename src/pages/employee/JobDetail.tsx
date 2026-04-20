@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { CheckCircle, ArrowLeft, Save, Wrench, Clock, AlertCircle, PlayCircle, PackageCheck, ScanLine } from "lucide-react";
+import { CheckCircle, ArrowLeft, Save, Wrench, Clock, AlertCircle, PlayCircle, PackageCheck, ScanLine, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -9,6 +9,13 @@ import { formatINR, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
 import { issueHandoverToken } from "@/lib/handover";
 import BrandLogo from "@/components/BrandLogo";
+
+interface AISummary {
+  summary: string;
+  highlights: string[];
+  watchpoints: string[];
+  next_due: string;
+}
 
 interface Booking {
   id: string; status: string; priority: string; scheduled_at: string; notes: string | null;
@@ -30,6 +37,8 @@ const EmployeeJobDetail = () => {
   const [partsUsed, setPartsUsed] = useState("");
   const [mileageAtService, setMileageAtService] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
 
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q);
   const { data: services } = useLiveTable<Service>("services", (q) => q);
@@ -59,6 +68,42 @@ const EmployeeJobDetail = () => {
   const vehicle = vehicles.find((v) => v.id === booking.vehicle_id);
   const service = services.find((s) => s.id === booking.service_id);
   const customer = profilesById[booking.customer_id];
+
+  const generateSummary = async () => {
+    if (!vehicle) return;
+    setAiBusy(true);
+    setAiSummary(null);
+    try {
+      const { data: hist } = await supabase
+        .from("service_history")
+        .select("service_date, cost, mileage_at_service, parts_used, notes, service_id")
+        .eq("vehicle_id", vehicle.id)
+        .order("service_date", { ascending: false })
+        .limit(15);
+
+      const svcMap = new Map(services.map((s) => [s.id, s.name]));
+      const enriched = (hist ?? []).map((h: { service_id: string }) => ({
+        ...h,
+        service: svcMap.get(h.service_id) ?? "Unknown",
+      }));
+
+      const { data, error } = await supabase.functions.invoke("ai-assistant", {
+        body: {
+          mode: "summary",
+          vehicle: { make: vehicle.make, model: vehicle.model, year: vehicle.year, mileage: vehicle.mileage, fuel_type: vehicle.fuel_type },
+          history: enriched,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAiSummary(data.result as AISummary);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "AI summary failed";
+      toast.error(msg);
+    } finally {
+      setAiBusy(false);
+    }
+  };
 
   const updateStatus = async (newStatus: string) => {
     if (!booking) return;
