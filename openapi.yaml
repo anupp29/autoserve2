@@ -413,6 +413,28 @@ paths:
   # =========================================================================
 
   /rest/v1/profiles:
+    head:
+      tags: [Profiles]
+      summary: Count profiles matching filter (no body returned)
+      description: >
+        Returns only HTTP headers (including `Content-Range`) for the profiles
+        collection. Use with `Prefer: count=exact` to retrieve the total count
+        of rows matching the filter without fetching data. Useful for pagination.
+      operationId: profiles_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: user_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Headers only – `Content-Range` contains the row count.
+          headers:
+            Content-Range:
+              description: "Row range and total, e.g. `0-0/42`."
+              schema: { type: string, example: "0-0/42" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [Profiles]
       summary: List / filter profiles
@@ -426,6 +448,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: id
           in: query
           schema: { type: string, format: uuid }
@@ -441,6 +464,12 @@ paths:
       responses:
         "200":
           description: Array of profile objects.
+          headers:
+            Content-Range:
+              description: >
+                Present when `Prefer: count=exact|planned|estimated` is sent.
+                Format: `{from}-{to}/{total}`, e.g. `0-9/42`.
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -480,6 +509,8 @@ paths:
           $ref: '#/components/responses/Conflict'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [Profiles]
       summary: Update profile(s) matching filter
@@ -550,6 +581,29 @@ paths:
   # =========================================================================
 
   /rest/v1/user_roles:
+    head:
+      tags: [UserRoles]
+      summary: Count user role assignments matching filter (no body returned)
+      description: >
+        Returns HTTP headers only. Use `Prefer: count=exact` to get the total
+        number of role rows matching the filter in the `Content-Range` header.
+      operationId: user_roles_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: user_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: role
+          in: query
+          schema: { type: string, enum: [manager, employee, customer] }
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/3" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [UserRoles]
       summary: List / filter user role assignments
@@ -562,6 +616,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: user_id
           in: query
           schema: { type: string, format: uuid }
@@ -575,6 +630,9 @@ paths:
       responses:
         "200":
           description: Array of user-role objects.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -612,6 +670,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [UserRoles]
       summary: Update a role assignment (manager only)
@@ -666,6 +726,32 @@ paths:
   # =========================================================================
 
   /rest/v1/vehicles:
+    head:
+      tags: [Vehicles]
+      summary: Count vehicles matching filter (no body returned)
+      description: >
+        Returns HTTP headers only. Use `Prefer: count=exact` to retrieve the
+        total matching vehicle count in the `Content-Range` header.
+      operationId: vehicles_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: owner_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: make
+          in: query
+          schema: { type: string }
+        - name: fuel_type
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/5" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [Vehicles]
       summary: List / filter vehicles
@@ -678,6 +764,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: id
           in: query
           schema: { type: string, format: uuid }
@@ -701,6 +788,9 @@ paths:
       responses:
         "200":
           description: Array of vehicle objects.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -757,6 +847,8 @@ paths:
           $ref: '#/components/responses/Conflict'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [Vehicles]
       summary: Update vehicle(s) matching filter
@@ -820,6 +912,28 @@ paths:
   # =========================================================================
 
   /rest/v1/services:
+    head:
+      tags: [Services]
+      summary: Count service catalogue entries matching filter (no body returned)
+      description: Use `Prefer: count=exact` to get total count in `Content-Range` header.
+      operationId: services_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: active
+          in: query
+          schema: { type: string }
+          description: "`eq.true` – only active services."
+        - name: category
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/12" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [Services]
       summary: List / filter service catalogue
@@ -830,6 +944,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: id
           in: query
           schema: { type: string, format: uuid }
@@ -848,6 +963,9 @@ paths:
       responses:
         "200":
           description: Array of service objects.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -895,6 +1013,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [Services]
       summary: Update service(s) (manager only)
@@ -953,6 +1073,32 @@ paths:
   # =========================================================================
 
   /rest/v1/inventory:
+    head:
+      tags: [Inventory]
+      summary: Count inventory items matching filter (no body returned)
+      description: >
+        Use `Prefer: count=exact` to get total item count in `Content-Range`.
+        Accessible to employees and managers only.
+      operationId: inventory_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: quantity
+          in: query
+          schema: { type: string }
+          description: "`lte.10` – low-stock items."
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/10" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
     get:
       tags: [Inventory]
       summary: List / filter inventory items
@@ -963,6 +1109,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: id
           in: query
           schema: { type: string, format: uuid }
@@ -981,6 +1128,9 @@ paths:
       responses:
         "200":
           description: Array of inventory items.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -1035,6 +1185,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [Inventory]
       summary: Update inventory item(s)
@@ -1097,6 +1249,38 @@ paths:
   # =========================================================================
 
   /rest/v1/bookings:
+    head:
+      tags: [Bookings]
+      summary: Count bookings matching filter (no body returned)
+      description: >
+        Use `Prefer: count=exact` to retrieve the total booking count matching
+        the filter in the `Content-Range` header. Useful for dashboard counters
+        (e.g., "5 bookings pending today").
+      operationId: bookings_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: status
+          in: query
+          schema: { type: string }
+          description: "`eq.pending` or `in.(pending,confirmed)` – filter by status."
+        - name: assigned_to
+          in: query
+          schema: { type: string, format: uuid }
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: scheduled_at
+          in: query
+          schema: { type: string }
+          description: "`gte.2026-04-20` – filter by date."
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/8" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [Bookings]
       summary: List / filter bookings
@@ -1111,6 +1295,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: id
           in: query
           schema: { type: string, format: uuid }
@@ -1154,6 +1339,9 @@ paths:
       responses:
         "200":
           description: Array of booking objects.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -1215,6 +1403,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [Bookings]
       summary: Update booking(s) matching filter
@@ -1305,6 +1495,31 @@ paths:
   # =========================================================================
 
   /rest/v1/service_history:
+    head:
+      tags: [ServiceHistory]
+      summary: Count service history records matching filter (no body returned)
+      description: Use `Prefer: count=exact` to get total count in `Content-Range`.
+      operationId: service_history_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: technician_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: service_date
+          in: query
+          schema: { type: string }
+          description: "`gte.2026-01-01`"
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/24" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [ServiceHistory]
       summary: List / filter service history
@@ -1318,6 +1533,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: id
           in: query
           schema: { type: string, format: uuid }
@@ -1340,6 +1556,9 @@ paths:
       responses:
         "200":
           description: Array of service history records.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -1398,6 +1617,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [ServiceHistory]
       summary: Update a service history record (manager only)
@@ -1456,6 +1677,34 @@ paths:
   # =========================================================================
 
   /rest/v1/notifications:
+    head:
+      tags: [Notifications]
+      summary: Count notifications matching filter (no body returned)
+      description: >
+        Use `Prefer: count=exact` to get the unread notification count in
+        `Content-Range`. Most useful with `?read=eq.false` to drive the
+        notification badge counter.
+      operationId: notifications_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: user_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: read
+          in: query
+          schema: { type: string }
+          description: "`eq.false` – unread count only."
+        - name: type
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/3" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [Notifications]
       summary: List / filter notifications for the authenticated user
@@ -1466,6 +1715,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: user_id
           in: query
           schema: { type: string, format: uuid }
@@ -1481,6 +1731,9 @@ paths:
       responses:
         "200":
           description: Array of notification objects.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -1528,6 +1781,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [Notifications]
       summary: Update notification(s) – e.g., mark as read
@@ -1595,6 +1850,37 @@ paths:
   # =========================================================================
 
   /rest/v1/service_reminders:
+    head:
+      tags: [ServiceReminders]
+      summary: Count service reminders matching filter (no body returned)
+      description: >
+        Use `Prefer: count=exact` to get the total reminder count in `Content-Range`.
+        Most useful with `?acknowledged=eq.false` to count pending reminders.
+      operationId: service_reminders_head
+      parameters:
+        - $ref: '#/components/parameters/PreferCount'
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: vehicle_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: acknowledged
+          in: query
+          schema: { type: string }
+          description: "`eq.false` – pending reminders only."
+        - name: due_date
+          in: query
+          schema: { type: string }
+          description: "`lte.2026-05-01` – due on or before a date."
+      responses:
+        "200":
+          description: Headers only.
+          headers:
+            Content-Range:
+              schema: { type: string, example: "0-0/2" }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       tags: [ServiceReminders]
       summary: List / filter service reminders
@@ -1607,6 +1893,7 @@ paths:
         - $ref: '#/components/parameters/OrderParam'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/PreferCount'
         - name: id
           in: query
           schema: { type: string, format: uuid }
@@ -1627,6 +1914,9 @@ paths:
       responses:
         "200":
           description: Array of service reminders.
+          headers:
+            Content-Range:
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -1671,6 +1961,8 @@ paths:
                 $ref: '#/components/schemas/ServiceReminder'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
     patch:
       tags: [ServiceReminders]
       summary: Update a service reminder – e.g., acknowledge
@@ -1709,14 +2001,29 @@ paths:
     delete:
       tags: [ServiceReminders]
       summary: Delete service reminder(s)
+      description: >
+        Customers can delete their own reminders. Managers can delete any reminder.
+        Filter by `id` to delete a single reminder, or by `customer_id` + `vehicle_id`
+        to bulk-delete all reminders for a specific vehicle, or by `acknowledged=eq.true`
+        to clear all acknowledged reminders.
       operationId: service_reminders_delete
       parameters:
         - name: id
           in: query
           schema: { type: string, format: uuid }
+          description: "`eq.{uuid}` – delete a single reminder by primary key."
         - name: customer_id
           in: query
           schema: { type: string, format: uuid }
+          description: "`eq.{uuid}` – delete all reminders for a customer."
+        - name: vehicle_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: "`eq.{uuid}` – delete all reminders for a specific vehicle."
+        - name: acknowledged
+          in: query
+          schema: { type: string }
+          description: "`eq.true` – delete all acknowledged reminders."
       responses:
         "204":
           description: Deleted.
@@ -2415,6 +2722,24 @@ components:
           - "return=headers-only"
       example: "return=representation"
 
+    PreferCount:
+      name: Prefer
+      in: header
+      description: >
+        PostgREST count preference header for GET requests.
+        - `count=exact` – return the precise total row count in the `Content-Range` header (requires a `COUNT(*)` query; may be slow on large tables).
+        - `count=planned` – return the Postgres planner estimate (fast, may be approximate).
+        - `count=estimated` – use exact for small result sets, planner estimate for large ones.
+
+        The response includes a `Content-Range` header in the format `0-{last}/{total}`, e.g. `Content-Range: 0-19/200`.
+      schema:
+        type: string
+        enum:
+          - "count=exact"
+          - "count=planned"
+          - "count=estimated"
+      example: "count=exact"
+
   # -------------------------------------------------------------------------
   # Reusable Responses
   # -------------------------------------------------------------------------
@@ -2454,6 +2779,37 @@ components:
             details: "Key (registration)=(HR 26 BX 1234) already exists."
             hint: null
             message: "duplicate key value violates unique constraint \"vehicles_registration_key\""
+
+    UnprocessableEntity:
+      description: >
+        Schema validation failure – a required field is missing, a value is
+        the wrong type, or a foreign-key / check-constraint is violated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PostgRESTError'
+          examples:
+            missingRequired:
+              summary: Required field missing
+              value:
+                code: "23502"
+                details: "Failing row contains (null, null, ...)."
+                hint: null
+                message: "null value in column \"customer_id\" violates not-null constraint"
+            invalidEnum:
+              summary: Invalid enum value
+              value:
+                code: "22P02"
+                details: null
+                hint: null
+                message: "invalid input value for enum booking_status: \"draft\""
+            foreignKeyViolation:
+              summary: Foreign key not found
+              value:
+                code: "23503"
+                details: "Key (vehicle_id)=(...) is not present in table \"vehicles\"."
+                hint: null
+                message: "insert or update on table \"bookings\" violates foreign key constraint"
 
     InternalServerError:
       description: Unexpected server error.

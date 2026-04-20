@@ -18,6 +18,8 @@ type Status = typeof ALL_STATUSES[number];
 const isUpcoming = (s: Status) => ["pending", "confirmed"].includes(s);
 const isInProgress = (s: Status) => ["checked_in", "in_progress", "ready_for_pickup"].includes(s);
 const isPast = (s: Status) => ["completed", "released"].includes(s);
+const isCancelled = (s: Status) => s === "cancelled";
+const isTerminal = (s: Status) => ["completed", "released", "cancelled"].includes(s);
 const showsDropoffQR = (s: Status) => ["pending", "confirmed"].includes(s);
 const showsPickupQR = (s: Status) => s === "ready_for_pickup";
 
@@ -57,6 +59,45 @@ describe("Booking lifecycle classification", () => {
   it("the lifecycle covers all 8 known statuses", () => {
     expect(ALL_STATUSES).toHaveLength(8);
   });
+
+  it("cancelled status is not upcoming, in-progress, or past", () => {
+    expect(isUpcoming("cancelled")).toBe(false);
+    expect(isInProgress("cancelled")).toBe(false);
+    expect(isPast("cancelled")).toBe(false);
+  });
+
+  it("identifies cancelled status correctly", () => {
+    expect(isCancelled("cancelled")).toBe(true);
+    expect(isCancelled("pending")).toBe(false);
+    expect(isCancelled("completed")).toBe(false);
+  });
+
+  it("terminal states are completed, released, and cancelled", () => {
+    expect(isTerminal("completed")).toBe(true);
+    expect(isTerminal("released")).toBe(true);
+    expect(isTerminal("cancelled")).toBe(true);
+    expect(isTerminal("in_progress")).toBe(false);
+    expect(isTerminal("pending")).toBe(false);
+    expect(isTerminal("checked_in")).toBe(false);
+  });
+
+  it("every status belongs to exactly one classification (or is cancelled)", () => {
+    const nonTerminalStatuses: Status[] = ["pending", "confirmed", "checked_in", "in_progress", "ready_for_pickup"];
+    nonTerminalStatuses.forEach((s) => {
+      const count = [isUpcoming(s), isInProgress(s), isPast(s)].filter(Boolean).length;
+      expect(count).toBe(1);
+    });
+  });
+
+  it("no non-pending/confirmed status shows the drop-off QR", () => {
+    const noQrStatuses: Status[] = ["checked_in", "in_progress", "ready_for_pickup", "completed", "released", "cancelled"];
+    noQrStatuses.forEach((s) => expect(showsDropoffQR(s)).toBe(false));
+  });
+
+  it("only ready_for_pickup status shows the pickup QR", () => {
+    const allExceptReady = ALL_STATUSES.filter((s) => s !== "ready_for_pickup");
+    allExceptReady.forEach((s) => expect(showsPickupQR(s)).toBe(false));
+  });
 });
 
 describe("Booking total cost with priority surcharge", () => {
@@ -80,5 +121,25 @@ describe("Booking total cost with priority surcharge", () => {
   it("multi-service bookings sum subtotals before applying surcharge", () => {
     const subtotal = 2499 + 1899 + 599;
     expect(computeTotal(subtotal, "express")).toBeCloseTo(subtotal * 1.15);
+  });
+
+  it("zero-cost booking stays at zero for all priorities", () => {
+    expect(computeTotal(0, "normal")).toBe(0);
+    expect(computeTotal(0, "express")).toBe(0);
+    expect(computeTotal(0, "priority")).toBe(0);
+  });
+
+  it("express surcharge is less than priority surcharge for same base", () => {
+    const base = 5000;
+    expect(computeTotal(base, "express")).toBeLessThan(computeTotal(base, "priority"));
+  });
+
+  it("priority surcharge of 30% on ₹4,999 is ≈ ₹6,499", () => {
+    expect(computeTotal(4999, "priority")).toBeCloseTo(6498.7, 0);
+  });
+
+  it("normal priority multiplier is exactly 1.0 (no surcharge)", () => {
+    const base = 12345;
+    expect(computeTotal(base, "normal")).toBe(base);
   });
 });
