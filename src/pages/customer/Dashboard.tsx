@@ -25,6 +25,7 @@ const statusBadge = (s: string) => {
 const CustomerDashboard = () => {
   const { user, profile } = useAuth();
   const [services, setServices] = useState<Record<string, Service>>({});
+  const [tips, setTips] = useState<{ loading: boolean; items: string[] | null; vehicle: Vehicle | null }>({ loading: false, items: null, vehicle: null });
 
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? "").order("created_at", { ascending: false }), [user?.id], { enabled: !!user });
   const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q.eq("customer_id", user?.id ?? "").order("scheduled_at", { ascending: true }), [user?.id], { enabled: !!user });
@@ -38,8 +39,22 @@ const CustomerDashboard = () => {
     });
   }, []);
 
+  // Fetch AI tips for the first vehicle once it loads
+  useEffect(() => {
+    const v = vehicles[0];
+    if (!v || tips.vehicle?.id === v.id) return;
+    setTips({ loading: true, items: null, vehicle: v });
+    supabase.functions
+      .invoke("ai-maintenance-tips", { body: { make: v.make, model: v.model, year: v.year, mileage: v.mileage, fuel_type: v.fuel_type } })
+      .then(({ data, error }) => {
+        if (error) setTips({ loading: false, items: null, vehicle: v });
+        else setTips({ loading: false, items: data?.tips ?? [], vehicle: v });
+      })
+      .catch(() => setTips({ loading: false, items: null, vehicle: v }));
+  }, [vehicles, tips.vehicle?.id]);
+
   const vehicleById = Object.fromEntries(vehicles.map((v) => [v.id, v]));
-  const upcoming = bookings.filter((b) => ["pending", "confirmed", "in_progress"].includes(b.status));
+  const upcoming = bookings.filter((b) => ["pending", "confirmed", "checked_in", "in_progress", "ready_for_pickup"].includes(b.status));
   const nextBooking = upcoming[0];
 
   const firstName = profile?.full_name?.split(" ")[0] || "there";
