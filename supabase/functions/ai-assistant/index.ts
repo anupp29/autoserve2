@@ -1,4 +1,4 @@
-// AutoServe AI Edge Function — handles 3 modes: chat, diagnose, valuate
+// AutoServe AI Edge Function — handles 5 modes: chat, diagnose, valuate, recommend, summary
 // Uses Lovable AI Gateway (no key required, pre-configured via LOVABLE_API_KEY)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -20,6 +20,16 @@ Return ONLY the JSON array, no markdown, no preamble.`,
   valuate: `You are an expert used-car valuator for the Indian market (Gurugram/Delhi NCR, 2024 prices in ₹).
 Given vehicle details, return ONLY a JSON object: { "estimated_value": number (₹), "low_estimate": number, "high_estimate": number, "confidence": number 0-100, "depreciation_pct_per_year": number, "narrative": string (2-3 sentences explaining the valuation, market trend, and condition impact), "tips": string[] (2 actionable tips to maximize resale value) }.
 Use realistic Indian secondary-market pricing. No markdown, no preamble.`,
+
+  recommend: `You are AutoServe's intelligent service-recommendation engine for an Indian multi-brand garage.
+Given a customer's vehicles, service history, and the available service catalogue, return ONLY a JSON array of 3-4 personalised recommendations.
+Each item MUST have: { "service_name": string (must EXACTLY match a name from the catalogue), "reason": string (one short sentence — cite mileage interval, time since last service, or seasonal trigger), "urgency": "low" | "medium" | "high", "estimated_savings_or_benefit": string (e.g. "Avoids ₹15,000 brake rotor replacement") }.
+Prioritise services the customer has NOT done recently. Consider typical Indian intervals (oil ~10,000 km, brake check ~20,000 km, AC ~12 months, battery ~3 years).
+No markdown, no preamble.`,
+
+  summary: `You are an expert Indian automotive technician's assistant.
+Given a vehicle's prior service history, produce a concise technician handover briefing as JSON: { "summary": string (2-3 sentences highlighting maintenance pattern), "highlights": string[] (3-4 bullet facts: last major service, recurring issues, parts replaced), "watchpoints": string[] (2-3 things the technician should inspect next based on past notes), "next_due": string (one suggestion of what is likely due next, with mileage or time interval) }.
+Keep it tactical and short. No markdown, no preamble.`,
 };
 
 Deno.serve(async (req) => {
@@ -29,14 +39,14 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { mode, messages, vehicle, symptoms, services_catalog } = await req.json();
+    const { mode, messages, vehicle, symptoms, services_catalog, history, customer_context } = await req.json();
     if (!mode || !SYSTEM_PROMPTS[mode]) {
       return new Response(JSON.stringify({ error: "Invalid mode" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Optionally enrich chat with the user's data
     let contextBlock = "";
-    if (mode === "chat") {
+    if (mode === "chat" || mode === "recommend") {
       const authHeader = req.headers.get("Authorization");
       if (authHeader) {
         const supabase = createClient(
@@ -46,20 +56,20 @@ Deno.serve(async (req) => {
         );
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const [{ data: vehicles }, { data: bookings }, { data: history }, { data: svcs }] = await Promise.all([
+          const [{ data: vehicles }, { data: bookings }, { data: hist }, { data: svcs }] = await Promise.all([
             supabase.from("vehicles").select("make, model, year, registration, mileage, fuel_type").eq("owner_id", user.id),
-            supabase.from("bookings").select("scheduled_at, status, notes, total_cost, service_id").eq("customer_id", user.id).order("scheduled_at", { ascending: false }).limit(5),
-            supabase.from("service_history").select("service_date, cost, mileage_at_service, notes, service_id").eq("customer_id", user.id).order("service_date", { ascending: false }).limit(5),
-            supabase.from("services").select("id, name, price, category"),
+            supabase.from("bookings").select("scheduled_at, status, notes, total_cost, service_id").eq("customer_id", user.id).order("scheduled_at", { ascending: false }).limit(8),
+            supabase.from("service_history").select("service_date, cost, mileage_at_service, notes, service_id").eq("customer_id", user.id).order("service_date", { ascending: false }).limit(10),
+            supabase.from("services").select("id, name, price, category").eq("active", true),
           ]);
-          const svcMap = new Map((svcs ?? []).map((s: any) => [s.id, s]));
-          contextBlock = `\n\n--- CUSTOMER CONTEXT ---\nVehicles: ${JSON.stringify(vehicles ?? [])}\nRecent bookings: ${JSON.stringify((bookings ?? []).map((b: any) => ({ ...b, service: svcMap.get(b.service_id)?.name })))}\nService history: ${JSON.stringify((history ?? []).map((h: any) => ({ ...h, service: svcMap.get(h.service_id)?.name })))}\nAvailable services: ${JSON.stringify((svcs ?? []).map((s: any) => ({ name: s.name, price: s.price, category: s.category })))}\n--- END CONTEXT ---`;
+          const svcMap = new Map((svcs ?? []).map((s: { id: string; name: string }) => [s.id, s]));
+          contextBlock = `\n\n--- CUSTOMER CONTEXT ---\nVehicles: ${JSON.stringify(vehicles ?? [])}\nRecent bookings: ${JSON.stringify((bookings ?? []).map((b: { service_id: string }) => ({ ...b, service: (svcMap.get(b.service_id) as { name?: string } | undefined)?.name })))}\nService history: ${JSON.stringify((hist ?? []).map((h: { service_id: string }) => ({ ...h, service: (svcMap.get(h.service_id) as { name?: string } | undefined)?.name })))}\nAvailable services: ${JSON.stringify((svcs ?? []).map((s: { name: string; price: number; category: string }) => ({ name: s.name, price: s.price, category: s.category })))}\n--- END CONTEXT ---`;
         }
       }
     }
 
     let userContent = "";
-    let chatMessages: any[] = [];
+    let chatMessages: { role: string; content: string }[] = [];
 
     if (mode === "chat") {
       chatMessages = [
@@ -76,6 +86,18 @@ Deno.serve(async (req) => {
       userContent = `Vehicle to valuate: ${JSON.stringify(vehicle)}`;
       chatMessages = [
         { role: "system", content: SYSTEM_PROMPTS.valuate },
+        { role: "user", content: userContent },
+      ];
+    } else if (mode === "recommend") {
+      const explicit = customer_context ? `\nExplicit context provided by app: ${JSON.stringify(customer_context)}` : "";
+      chatMessages = [
+        { role: "system", content: SYSTEM_PROMPTS.recommend + contextBlock + explicit },
+        { role: "user", content: "Generate the personalised recommendations now." },
+      ];
+    } else if (mode === "summary") {
+      userContent = `Vehicle: ${JSON.stringify(vehicle)}\nService history (most recent first): ${JSON.stringify(history ?? [])}`;
+      chatMessages = [
+        { role: "system", content: SYSTEM_PROMPTS.summary },
         { role: "user", content: userContent },
       ];
     }
@@ -106,8 +128,8 @@ Deno.serve(async (req) => {
     const data = await aiResp.json();
     const content = data.choices?.[0]?.message?.content ?? "";
 
-    // For diagnose/valuate, try to parse JSON
-    if (mode === "diagnose" || mode === "valuate") {
+    // For modes that return JSON, try to parse
+    if (mode === "diagnose" || mode === "valuate" || mode === "recommend" || mode === "summary") {
       try {
         const cleaned = content.replace(/```json\s*|```\s*/g, "").trim();
         const parsed = JSON.parse(cleaned);
@@ -118,8 +140,9 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ content }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (err: any) {
-    console.error("ai-assistant error:", err);
-    return new Response(JSON.stringify({ error: err.message ?? String(err) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("ai-assistant error:", msg);
+    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
