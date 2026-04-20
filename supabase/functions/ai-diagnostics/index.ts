@@ -1,4 +1,7 @@
-// Symptom-based AI diagnostic assistant. Returns probable causes + recommended services from the catalogue.
+// Symptom-based AI diagnostic assistant + general chat mode for the customer AI Assistant.
+// Body shapes:
+//   Diagnostics: { symptoms: string, vehicle?: {...} }
+//   Chat:        { mode: "chat", context?: {...}, history: [{role, content}, ...] }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -16,7 +19,44 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { symptoms, vehicle } = await req.json();
+    const body = await req.json();
+
+    // ============ CHAT MODE ============
+    if (body.mode === "chat") {
+      const history: Array<{ role: string; content: string }> = Array.isArray(body.history) ? body.history : [];
+      if (history.length === 0) return json(400, { error: "history required" });
+
+      const ctx = body.context ?? {};
+      const systemPrompt = `You are AutoServe AI, an expert assistant for an Indian car-service workshop.
+Be concise, friendly, use Indian Rupees (₹). Suggest specific services from the catalogue when relevant.
+You have read access to this customer's data:
+${JSON.stringify(ctx, null, 2)}
+
+Rules:
+- Never invent services not in the catalogue.
+- For booking requests, always tell the user to use the "Open booking page" link — do not pretend to book.
+- Keep replies under 6 sentences unless the user asks for detail.`;
+
+      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "system", content: systemPrompt }, ...history],
+        }),
+      });
+
+      if (aiRes.status === 429) return json(429, { error: "Rate limited" });
+      if (aiRes.status === 402) return json(402, { error: "AI credits exhausted" });
+      if (!aiRes.ok) return json(500, { error: `AI error ${aiRes.status}` });
+
+      const data = await aiRes.json();
+      const reply = data?.choices?.[0]?.message?.content ?? "Sorry, I couldn't generate a response.";
+      return json(200, { reply });
+    }
+
+    // ============ DIAGNOSTICS MODE ============
+    const { symptoms, vehicle } = body;
     if (!symptoms) return json(400, { error: "symptoms required" });
 
     const { data: services } = await admin.from("services").select("id, name, category, price").eq("active", true);
