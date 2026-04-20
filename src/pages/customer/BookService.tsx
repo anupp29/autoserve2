@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle, Car, Clock, Loader2, AlertCircle, Wrench, X, Calendar as CalIcon, ScanLine } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +31,8 @@ interface ConfirmedBooking {
 
 const BookService = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const navState = (location.state ?? {}) as { preselectServiceName?: string; preselectServiceId?: string; preselectVehicleId?: string };
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [services, setServices] = useState<Service[]>([]);
@@ -52,11 +54,37 @@ const BookService = () => {
       supabase.from("services").select("*").eq("active", true).order("category"),
       supabase.from("vehicles").select("*").eq("owner_id", user.id).order("created_at", { ascending: false }),
     ]).then(([s, v]) => {
-      setServices((s.data as Service[]) ?? []);
-      setVehicles((v.data as Vehicle[]) ?? []);
-      if (v.data && v.data.length > 0) setSelectedVehicle((v.data as Vehicle[])[0].id);
+      const allServices = (s.data as Service[]) ?? [];
+      const allVehicles = (v.data as Vehicle[]) ?? [];
+      setServices(allServices);
+      setVehicles(allVehicles);
+
+      // Pre-fill from navigation state (e.g. coming from AI Diagnostics or Vehicle tips)
+      const preVehId = navState.preselectVehicleId && allVehicles.find((x) => x.id === navState.preselectVehicleId)?.id;
+      if (preVehId) {
+        setSelectedVehicle(preVehId);
+      } else if (allVehicles.length > 0) {
+        setSelectedVehicle(allVehicles[0].id);
+      }
+
+      let preselected: Service | undefined;
+      if (navState.preselectServiceId) {
+        preselected = allServices.find((x) => x.id === navState.preselectServiceId);
+      } else if (navState.preselectServiceName) {
+        const target = navState.preselectServiceName.toLowerCase();
+        preselected =
+          allServices.find((x) => x.name.toLowerCase() === target) ||
+          allServices.find((x) => x.name.toLowerCase().includes(target.split(" ")[0]));
+      }
+      if (preselected) {
+        setSelectedServices([preselected.id]);
+        // Skip straight to scheduling if vehicle is also known
+        setStep(preVehId ? 2 : 1);
+        toast.success(`Pre-selected: ${preselected.name}`);
+      }
       setLoading(false);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const chosenServices = services.filter((s) => selectedServices.includes(s.id));
