@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Users, CheckCircle, Zap, Filter, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -31,13 +31,22 @@ const statusColor: Record<string, string> = {
 const ManagerBookings = () => {
   const [activeTab, setActiveTab] = useState<string>("All");
   const [search, setSearch] = useState("");
-  const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q.order("scheduled_at", { ascending: false }));
+  const { data: bookings, refetch: refetchBookings } = useLiveTable<Booking>("bookings", (q) => q.order("scheduled_at", { ascending: false }));
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q);
   const { data: services } = useLiveTable<Service>("services", (q) => q);
   const { profiles: technicians, byId } = useProfilesByRole("employee");
 
+  // Optimistic overrides: applied instantly on mutation, cleared when fresh data arrives
+  const [optimistic, setOptimistic] = useState<Record<string, Partial<Booking>>>({});
+  useEffect(() => { setOptimistic({}); }, [bookings]);
+
+  const displayedBookings = useMemo(
+    () => bookings.map((b) => optimistic[b.id] ? { ...b, ...optimistic[b.id] } : b),
+    [bookings, optimistic]
+  );
+
   const filtered = useMemo(() => {
-    return bookings.filter((b) => {
+    return displayedBookings.filter((b) => {
       if (activeTab !== "All" && b.status !== activeTab) return false;
       if (search) {
         const v = vehicles.find((x) => x.id === b.vehicle_id);
@@ -48,16 +57,23 @@ const ManagerBookings = () => {
       }
       return true;
     });
-  }, [bookings, activeTab, search, vehicles, services, byId]);
+  }, [displayedBookings, activeTab, search, vehicles, services, byId]);
 
   const assign = async (b: Booking, techId: string) => {
     const newStatus = techId && b.status === "pending" ? "confirmed" : (b.status as any);
+    // Optimistic update
+    setOptimistic((prev) => ({ ...prev, [b.id]: { ...prev[b.id], assigned_to: techId || null, status: newStatus } }));
     const { error } = await supabase.from("bookings").update({
       assigned_to: techId || null,
       status: newStatus,
     }).eq("id", b.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      setOptimistic((prev) => { const next = { ...prev }; delete next[b.id]; return next; });
+      toast.error(error.message);
+      return;
+    }
     toast.success(techId ? "Technician assigned" : "Unassigned");
+    refetchBookings();
     if (techId) {
       await supabase.from("notifications").insert({
         user_id: techId,
@@ -69,15 +85,22 @@ const ManagerBookings = () => {
   };
 
   const updateStatus = async (b: Booking, status: string) => {
+    // Optimistic update
+    setOptimistic((prev) => ({ ...prev, [b.id]: { ...prev[b.id], status } }));
     const { error } = await supabase.from("bookings").update({ status: status as any }).eq("id", b.id);
-    if (error) toast.error(error.message);
-    else toast.success(`Status → ${status.replace("_", " ")}`);
+    if (error) {
+      setOptimistic((prev) => { const next = { ...prev }; delete next[b.id]; return next; });
+      toast.error(error.message);
+    } else {
+      toast.success(`Status → ${status.replace(/_/g, " ")}`);
+      refetchBookings();
+    }
   };
 
   const counts = {
-    pending: bookings.filter((b) => b.status === "pending").length,
-    in_progress: bookings.filter((b) => b.status === "in_progress").length,
-    completed: bookings.filter((b) => b.status === "completed").length,
+    pending: displayedBookings.filter((b) => b.status === "pending").length,
+    in_progress: displayedBookings.filter((b) => b.status === "in_progress").length,
+    completed: displayedBookings.filter((b) => b.status === "completed").length,
   };
 
   return (
