@@ -68,7 +68,7 @@ const ManagerReports = () => {
     }
     return arr;
   }, [history]);
-  const maxMonth = Math.max(1, ...months.map((m) => m.total));
+  
 
   // service distribution
   const distribution = useMemo(() => {
@@ -137,36 +137,101 @@ const ManagerReports = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-card p-6 rounded-xl border border-border/20 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Revenue — Last 6 Months</h3>
+            <div>
+              <h3 className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Revenue Trend — {periodDays > 0 ? `Last ${periodDays} days` : "Last 90 days"}</h3>
+              <p className="text-2xl font-black text-on-surface font-mono mt-1">{formatINR(dailySeries.reduce((s, d) => s + d.total, 0))}</p>
+            </div>
             <span className="text-xs font-bold text-emerald-600 inline-flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Live</span>
           </div>
-          <div className="h-48 flex items-end gap-4">
-            {months.map((bar) => (
-              <div key={bar.month} className="flex-1 flex flex-col items-center gap-2">
-                <span className="text-[10px] font-bold text-on-surface font-mono">{bar.total > 0 ? formatINR(bar.total) : ""}</span>
-                <div className="w-full bg-gradient-to-t from-primary to-primary/40 rounded-t" style={{ height: `${Math.max((bar.total / maxMonth) * 100, 4)}%` }} />
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{bar.month}</span>
-              </div>
-            ))}
+          <div className="h-64 -mx-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailySeries} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={Math.max(0, Math.floor(dailySeries.length / 8) - 1)}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => v >= 100000 ? `₹${(v / 100000).toFixed(1)}L` : v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`}
+                  width={50}
+                />
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  formatter={(value: number) => [formatINR(value), "Revenue"]}
+                  labelFormatter={(l) => l}
+                />
+                <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#revGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
+          {months.some((m) => m.total > 0) && (
+            <div className="mt-6 pt-4 border-t border-border/10 grid grid-cols-6 gap-2">
+              {months.map((m) => (
+                <div key={m.month} className="text-center">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{m.month}</p>
+                  <p className="text-xs font-bold font-mono text-on-surface mt-1">{m.total > 0 ? formatINR(m.total) : "—"}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="bg-card p-6 rounded-xl border border-border/20 shadow-sm">
           <h3 className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-4">Service Distribution</h3>
-          {distribution.length === 0 && <p className="text-xs text-muted-foreground">No data yet.</p>}
-          {distribution.map((d) => (
-            <div key={d.name} className="mb-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-on-surface font-medium">{d.name}</span>
-                <span className="font-bold text-on-surface">{d.pct}%</span>
+          {distribution.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No data yet.</p>
+          ) : (
+            <>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={distribution}
+                      dataKey="amt"
+                      nameKey="name"
+                      innerRadius={32}
+                      outerRadius={64}
+                      paddingAngle={2}
+                    >
+                      {distribution.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                      formatter={(value: number, name: string) => [formatINR(Number(value)), name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-              <div className="h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${d.pct}%` }} />
+              <div className="mt-3 space-y-2">
+                {distribution.map((d, i) => (
+                  <div key={d.name} className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="text-on-surface font-medium truncate">{d.name}</span>
+                    </span>
+                    <span className="font-bold text-on-surface font-mono shrink-0">{d.pct}%</span>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            </>
+          )}
         </div>
       </div>
+
 
       <div className="bg-card rounded-xl border border-border/20 shadow-sm">
         <div className="flex items-center justify-between p-4 lg:p-6 border-b border-border/20">
