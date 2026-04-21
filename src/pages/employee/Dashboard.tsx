@@ -27,9 +27,9 @@ const EmployeeDashboard = () => {
 
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const todays = bookings.filter((b) => new Date(b.scheduled_at) >= todayStart);
-  const pending = todays.filter((b) => b.status === "pending" || b.status === "confirmed");
-  const inProgress = todays.filter((b) => b.status === "in_progress");
-  const completed = todays.filter((b) => b.status === "completed");
+  const pending = todays.filter((b) => b.status === "pending" || b.status === "confirmed" || b.status === "checked_in");
+  const inProgress = todays.filter((b) => b.status === "in_progress" || b.status === "ready_for_pickup");
+  const completed = todays.filter((b) => b.status === "completed" || b.status === "released");
   const active = inProgress[0];
   const queue = pending.slice(0, 4);
 
