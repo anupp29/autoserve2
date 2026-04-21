@@ -3,6 +3,9 @@ import { Calendar, Download, TrendingUp } from "lucide-react";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
 import { formatINR, formatDate } from "@/lib/format";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
+
+const PIE_COLORS = ["hsl(var(--primary))", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"];
 
 interface History { id: string; cost: number; service_date: string; service_id: string; customer_id: string; vehicle_id: string; }
 interface Service { id: string; name: string; category: string; }
