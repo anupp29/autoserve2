@@ -1,7 +1,7 @@
-// Symptom-based AI diagnostic assistant + general chat mode for the customer AI Assistant.
-// Body shapes:
-//   Diagnostics: { symptoms: string, vehicle?: {...} }
-//   Chat:        { mode: "chat", context?: {...}, history: [{role, content}, ...] }
+// AI diagnostic + chat assistant for AutoServe.
+// Modes:
+//   diagnose (default): { mode?: "diagnose", symptoms, vehicle, catalog? }  → { faults, recommended_service_ids, proTip }
+//   chat:               { mode: "chat", history, context? }                 → { reply }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -55,27 +55,42 @@ Rules:
       return json(200, { reply });
     }
 
-    // ============ DIAGNOSTICS MODE ============
+    // ============ DIAGNOSTICS MODE (default) ============
     const { symptoms, vehicle } = body;
     if (!symptoms) return json(400, { error: "symptoms required" });
 
-    const { data: services } = await admin.from("services").select("id, name, category, price").eq("active", true);
-    const catalog = (services ?? []).map((s: any) => `${s.name} [${s.category}] – ₹${s.price}`).join("\n");
+    // Use catalog from request if provided, else fetch from DB
+    let catalog: Array<{ id: string; name: string; category: string; price: number; description?: string | null }>;
+    if (Array.isArray(body.catalog) && body.catalog.length > 0) {
+      catalog = body.catalog;
+    } else {
+      const { data: services } = await admin.from("services").select("id, name, category, price, description").eq("active", true);
+      catalog = (services ?? []) as any;
+    }
 
-    const vehInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.fuel_type ?? "Petrol"}, ${vehicle.mileage} km)` : "Unknown vehicle";
+    const catalogText = catalog.map((s) => `- ${s.id} | ${s.name} [${s.category}] – ₹${s.price}`).join("\n");
+    const vehInfo = vehicle ? `${vehicle.year ?? "?"} ${vehicle.make ?? ""} ${vehicle.model ?? ""} (${vehicle.fuel_type ?? "Petrol"}, ${vehicle.mileage ?? "?"} km)` : "Unknown vehicle";
+
     const prompt = `Vehicle: ${vehInfo}
 Customer's symptoms: ${symptoms}
 
-Available services:
-${catalog}
+Available services (use the IDs verbatim):
+${catalogText}
 
-Return JSON:
+Return STRICT JSON in exactly this shape:
 {
-  "probable_causes": ["2-4 short probable causes ranked by likelihood"],
-  "severity": "low" | "medium" | "high",
-  "recommended_service_names": ["1-3 services from the catalogue above to fix this"],
-  "advice": "2-3 sentences of plain-English advice for the customer."
-}`;
+  "faults": [
+    { "name": "short fault name", "description": "1 sentence cause/explanation", "confidence": 80 }
+  ],
+  "recommended_service_ids": ["<service_id from list above>", "..."],
+  "proTip": "One actionable sentence of advice for the customer."
+}
+
+Rules:
+- 2 to 4 faults, ranked by likelihood (highest confidence first).
+- confidence is an integer 0–100.
+- recommended_service_ids must use ONLY ids from the list above; pick 1–3 most relevant.
+- proTip should be plain English, friendly, and actionable.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -83,7 +98,7 @@ Return JSON:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are an experienced automotive diagnostic technician. Output valid JSON only." },
+          { role: "system", content: "You are an experienced automotive diagnostic technician for the Indian market. Output valid JSON only, exactly matching the requested schema." },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
@@ -92,18 +107,34 @@ Return JSON:
 
     if (aiRes.status === 429) return json(429, { error: "Rate limited" });
     if (aiRes.status === 402) return json(402, { error: "AI credits exhausted" });
-    if (!aiRes.ok) return json(500, { error: `AI error ${aiRes.status}` });
+    if (!aiRes.ok) {
+      const text = await aiRes.text();
+      console.error("AI error", aiRes.status, text);
+      return json(500, { error: `AI error ${aiRes.status}` });
+    }
 
     const data = await aiRes.json();
     const raw = data?.choices?.[0]?.message?.content ?? "{}";
     let parsed: any = {};
     try { parsed = JSON.parse(raw); } catch { return json(500, { error: "Invalid AI response" }); }
 
-    const recIds = (parsed.recommended_service_names ?? [])
-      .map((n: string) => services?.find((s: any) => s.name.toLowerCase() === String(n).toLowerCase())?.id)
-      .filter(Boolean);
+    // Sanitise / coerce output to expected shape
+    const faults = Array.isArray(parsed.faults)
+      ? parsed.faults.map((f: any) => ({
+          name: String(f.name ?? "Possible issue"),
+          description: String(f.description ?? ""),
+          confidence: Math.max(0, Math.min(100, Math.round(Number(f.confidence ?? 50)))),
+        }))
+      : [];
 
-    return json(200, { ...parsed, recommended_service_ids: recIds });
+    const validIds = new Set(catalog.map((s) => s.id));
+    const recommended_service_ids = Array.isArray(parsed.recommended_service_ids)
+      ? parsed.recommended_service_ids.filter((id: any) => validIds.has(String(id)))
+      : [];
+
+    const proTip = String(parsed.proTip ?? parsed.advice ?? "Get this checked at the workshop soon.");
+
+    return json(200, { faults, recommended_service_ids, proTip });
   } catch (e) {
     console.error(e);
     return json(500, { error: String(e) });
