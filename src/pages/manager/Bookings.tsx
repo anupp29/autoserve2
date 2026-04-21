@@ -98,9 +98,9 @@ const ManagerBookings = () => {
   };
 
   const counts = {
-    pending: displayedBookings.filter((b) => b.status === "pending").length,
-    in_progress: displayedBookings.filter((b) => b.status === "in_progress").length,
-    completed: displayedBookings.filter((b) => b.status === "completed").length,
+    pending: displayedBookings.filter((b) => b.status === "pending" || b.status === "confirmed").length,
+    in_progress: displayedBookings.filter((b) => b.status === "in_progress" || b.status === "checked_in" || b.status === "ready_for_pickup").length,
+    completed: displayedBookings.filter((b) => b.status === "completed" || b.status === "released").length,
   };
 
   return (
