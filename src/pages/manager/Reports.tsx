@@ -32,7 +32,27 @@ const ManagerReports = () => {
   const totalRevenue = periodHistory.reduce((s, h) => s + Number(h.cost || 0), 0);
   const avgTicket = periodHistory.length ? totalRevenue / periodHistory.length : 0;
 
-  // monthly bars (last 6 months)
+  // Daily series for the selected period (or last 90d when "All time")
+  const dailySeries = useMemo(() => {
+    const days = periodDays > 0 ? periodDays : 90;
+    const buckets: Record<string, number> = {};
+    const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - (days - 1));
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      buckets[d.toISOString().slice(0, 10)] = 0;
+    }
+    history.forEach((h) => {
+      const key = new Date(h.service_date).toISOString().slice(0, 10);
+      if (key in buckets) buckets[key] += Number(h.cost || 0);
+    });
+    return Object.entries(buckets).map(([date, total]) => ({
+      date,
+      label: new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      total,
+    }));
+  }, [history, periodDays]);
+
+  // Monthly series for last 6 months (used as a quick KPI under the line chart)
   const months = useMemo(() => {
     const arr: { month: string; total: number }[] = [];
     for (let i = 5; i >= 0; i--) {
