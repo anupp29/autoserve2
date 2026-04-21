@@ -7,6 +7,7 @@ type TableName =
   | "services"
   | "inventory"
   | "service_history"
+  | "service_reminders"
   | "notifications"
   | "user_roles"
   | "profiles";

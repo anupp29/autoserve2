@@ -16,8 +16,11 @@ interface Service { id: string; name: string; duration_minutes: number; }
 const statusColor: Record<string, string> = {
   pending: "text-amber-600 bg-amber-50",
   confirmed: "text-primary bg-primary/10",
+  checked_in: "text-primary bg-primary/10",
   in_progress: "text-primary bg-primary/10",
+  ready_for_pickup: "text-emerald-600 bg-emerald-50",
   completed: "text-emerald-600 bg-emerald-50",
+  released: "text-emerald-700 bg-emerald-100",
   cancelled: "text-destructive bg-destructive/10",
 };
 
@@ -49,9 +52,9 @@ const EmployeeServiceQueue = () => {
     const t = new Date(b.scheduled_at).getTime();
     return t >= todayStart.getTime() && t <= todayEnd.getTime();
   });
-  const inQueue = todays.filter((b) => b.status === "pending" || b.status === "confirmed").length;
-  const inProg = todays.filter((b) => b.status === "in_progress").length;
-  const completed = todays.filter((b) => b.status === "completed").length;
+  const inQueue = todays.filter((b) => b.status === "pending" || b.status === "confirmed" || b.status === "checked_in").length;
+  const inProg = todays.filter((b) => b.status === "in_progress" || b.status === "ready_for_pickup").length;
+  const completed = todays.filter((b) => b.status === "completed" || b.status === "released").length;
 
   const filteredBookings = bookings.filter((j) => {
     if (!search) return true;

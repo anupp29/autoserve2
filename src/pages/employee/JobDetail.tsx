@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { CheckCircle, ArrowLeft, Save, AlertCircle, PlayCircle, Sparkles, Loader2 } from "lucide-react";
+import { CheckCircle, ArrowLeft, Save, AlertCircle, PlayCircle, Sparkles, Loader2, LogIn, PackageCheck, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -16,7 +16,17 @@ interface Booking {
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; mileage: number; fuel_type: string | null; color: string | null; }
 interface Service { id: string; name: string; duration_minutes: number; price: number; category: string; }
 
-const STATUSES = ["pending", "confirmed", "in_progress", "completed", "cancelled"] as const;
+const STATUSES = ["pending", "confirmed", "checked_in", "in_progress", "ready_for_pickup", "completed", "released", "cancelled"] as const;
+const STATUS_COLOR: Record<string, string> = {
+  pending: "text-amber-600 bg-amber-50",
+  confirmed: "text-primary bg-primary/10",
+  checked_in: "text-primary bg-primary/10",
+  in_progress: "text-primary bg-primary/10",
+  ready_for_pickup: "text-emerald-600 bg-emerald-50",
+  completed: "text-emerald-600 bg-emerald-50",
+  released: "text-emerald-700 bg-emerald-100",
+  cancelled: "text-destructive bg-destructive/10",
+};
 
 const EmployeeJobDetail = () => {
   const { id } = useParams();
@@ -60,43 +70,48 @@ const EmployeeJobDetail = () => {
 
   const updateStatus = async (newStatus: string) => {
     if (!booking) return;
+    const prevStatus = booking.status;
     // Optimistic update — reflect change immediately in local state
     setBooking((prev) => prev ? { ...prev, status: newStatus } : prev);
     setSaving(true);
+    const patch: any = { status: newStatus, notes };
+    if (newStatus === "checked_in") patch.checked_in_at = new Date().toISOString();
+    if (newStatus === "released") patch.released_at = new Date().toISOString();
     const { error } = await supabase
       .from("bookings")
-      .update({ status: newStatus as any, notes })
+      .update(patch)
       .eq("id", booking.id);
     setSaving(false);
     if (error) {
       // Revert optimistic update
-      setBooking((prev) => prev ? { ...prev, status: booking.status } : prev);
+      setBooking((prev) => prev ? { ...prev, status: prevStatus } : prev);
       toast.error(error.message);
       return;
     }
-    toast.success(`Status → ${newStatus.replace("_", " ")}`);
+    toast.success(`Status → ${newStatus.replace(/_/g, " ")}`);
 
     // Notify customer
     await supabase.from("notifications").insert({
       user_id: booking.customer_id,
       title: "Service Update",
-      message: `Your ${service?.name || "service"} is now ${newStatus.replace("_", " ")}.`,
-      type: newStatus === "completed" ? "success" : "info",
+      message: `Your ${service?.name || "service"} is now ${newStatus.replace(/_/g, " ")}.`,
+      type: (newStatus === "completed" || newStatus === "released" || newStatus === "ready_for_pickup") ? "success" : "info",
     });
 
-    // If completed → write service_history record
-    if (newStatus === "completed") {
-      await supabase.from("service_history").insert({
-        booking_id: booking.id,
-        customer_id: booking.customer_id,
-        vehicle_id: booking.vehicle_id,
-        service_id: booking.service_id,
-        technician_id: user?.id,
-        cost: booking.total_cost ?? service?.price ?? 0,
-        notes: notes || null,
-        parts_used: partsUsed || null,
-        mileage_at_service: mileageAtService ? parseInt(mileageAtService, 10) : null,
-      });
+    // service_history is auto-created by DB trigger on completed/released — no manual insert needed.
+    // If technician provided extra context (parts, mileage), patch the row now.
+    if ((newStatus === "completed" || newStatus === "released") && (partsUsed || mileageAtService)) {
+      const { data: existing } = await supabase
+        .from("service_history")
+        .select("id")
+        .eq("booking_id", booking.id)
+        .maybeSingle();
+      if (existing?.id) {
+        await supabase.from("service_history").update({
+          parts_used: partsUsed || null,
+          mileage_at_service: mileageAtService ? parseInt(mileageAtService, 10) : null,
+        }).eq("id", existing.id);
+      }
     }
   };
 
@@ -156,13 +171,8 @@ const EmployeeJobDetail = () => {
             <div><span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold block">Customer</span><span className="font-bold">{customer?.full_name || "—"}</span></div>
           </div>
         </div>
-        <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full self-start ${
-          booking.status === "completed" ? "text-emerald-600 bg-emerald-50" :
-          booking.status === "in_progress" ? "text-primary bg-primary/10" :
-          booking.status === "cancelled" ? "text-destructive bg-destructive/10" :
-          "text-amber-600 bg-amber-50"
-        }`}>
-          {booking.status.replace("_", " ")}
+        <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full self-start ${STATUS_COLOR[booking.status] ?? "text-amber-600 bg-amber-50"}`}>
+          {booking.status.replace(/_/g, " ")}
         </span>
       </div>
 
@@ -226,7 +236,7 @@ const EmployeeJobDetail = () => {
             />
           </div>
 
-          {booking.status === "in_progress" && (
+          {(booking.status === "in_progress" || booking.status === "ready_for_pickup") && (
             <div className="bg-card p-6 rounded-xl border border-border/20 shadow-sm">
               <h3 className="font-bold text-on-surface mb-4">Completion Details</h3>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -253,21 +263,36 @@ const EmployeeJobDetail = () => {
                 </button>
               )}
               {(booking.status === "pending" || booking.status === "confirmed") && (
+                <button onClick={() => updateStatus("checked_in")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary/10 text-primary rounded-lg text-sm font-bold hover:bg-primary/20 transition-colors disabled:opacity-50">
+                  <LogIn className="w-4 h-4" /> Check In Vehicle
+                </button>
+              )}
+              {(booking.status === "pending" || booking.status === "confirmed" || booking.status === "checked_in") && (
                 <button onClick={() => updateStatus("in_progress")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-50">
                   <PlayCircle className="w-4 h-4" /> Start Job
                 </button>
               )}
               {booking.status === "in_progress" && (
+                <button onClick={() => updateStatus("ready_for_pickup")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-50">
+                  <PackageCheck className="w-4 h-4" /> Ready for Pickup
+                </button>
+              )}
+              {booking.status === "ready_for_pickup" && (
                 <button onClick={() => updateStatus("completed")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-50">
                   <CheckCircle className="w-4 h-4" /> Mark Completed
                 </button>
               )}
-              {booking.status !== "completed" && booking.status !== "cancelled" && (
+              {booking.status === "completed" && (
+                <button onClick={() => updateStatus("released")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-700 text-white rounded-lg text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-50">
+                  <Truck className="w-4 h-4" /> Release Vehicle
+                </button>
+              )}
+              {booking.status !== "completed" && booking.status !== "released" && booking.status !== "cancelled" && (
                 <button onClick={() => updateStatus("cancelled")} disabled={saving} className="w-full flex items-center justify-center gap-2 py-2.5 border border-destructive/30 text-destructive rounded-lg text-sm font-bold hover:bg-destructive/5 transition-colors disabled:opacity-50">
                   <AlertCircle className="w-4 h-4" /> Cancel Job
                 </button>
               )}
-              {(booking.status === "completed" || booking.status === "cancelled") && (
+              {(booking.status === "released" || booking.status === "cancelled") && (
                 <button onClick={() => navigate("/employee/queue")} className="w-full flex items-center justify-center gap-2 py-2.5 border border-border/30 rounded-lg text-sm font-bold hover:bg-surface-container transition-colors">
                   <ArrowLeft className="w-4 h-4" /> Back to Queue
                 </button>
