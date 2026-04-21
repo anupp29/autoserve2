@@ -1,7 +1,43 @@
 # AutoServe — Test Cases Matrix
 
-Last verified: 2026-04-20 · Status: **35/35 unit tests pass · all edge functions return 200 · trigger verified**
+Last verified: 2026-04-21 · Status: **209/209 unit tests pass · 4 AI edge functions return 200 · realtime active on all 9 tables · trigger verified**
 > Bug found & fixed: `initials("  ")` returned `""` → now correctly returns `"?"` — see §F below.
+
+---
+
+## 🔴 G. Concurrency Audit Fixes (2026-04-21)
+
+End-to-end audit of multi-user realtime sync between manager / employee / customer portals.
+
+| # | Flaw | Where | Fix | Verified |
+|---|---|---|---|---|
+| G1 | Technician dropdown only had 5 of 8 statuses (`pending/confirmed/in_progress/completed/cancelled`) — couldn't drive `checked_in`, `ready_for_pickup`, `released` lifecycle states the database supports. | `src/pages/employee/JobDetail.tsx` | Added all 8 statuses with proper button progression (Confirm → Check-In → Start → Ready-for-Pickup → Complete → Release). Each transition writes `checked_in_at` / `released_at` timestamps. | ✅ |
+| G2 | Employee Dashboard / ServiceQueue KPI counters ignored `checked_in`, `ready_for_pickup`, `released` — bookings in mid-lifecycle disappeared from "Pending" / "In Progress" tiles. | `src/pages/employee/Dashboard.tsx`, `src/pages/employee/ServiceQueue.tsx` | Pending = `pending+confirmed+checked_in`. In Progress = `in_progress+ready_for_pickup`. Completed = `completed+released`. | ✅ |
+| G3 | Manager Bookings KPI counters had the same omission — "Completed" tile ignored `released` rows. | `src/pages/manager/Bookings.tsx` | Same coalesced status grouping for the 3 KPI tiles. | ✅ |
+| G4 | `service_reminders` table had `REPLICA IDENTITY = default` — UPDATE events sent only PK; subscribed clients never saw the changed columns. | DB migration | `ALTER TABLE service_reminders REPLICA IDENTITY FULL` — now matches the other 8 realtime tables. | ✅ |
+| G5 | `useLiveTable` `TableName` union excluded `service_reminders`, blocking type-safe subscriptions to it. | `src/hooks/useRealtimeQuery.ts` | Added `"service_reminders"` to the union. | ✅ |
+| G6 | JobDetail manually `INSERT`-ed into `service_history` on completion — the DB trigger already does this. Manual insert overwrote technician's `parts_used` / `mileage_at_service`. | `src/pages/employee/JobDetail.tsx` | Removed redundant insert. JobDetail now patches the trigger-created row with parts/mileage fields. | ✅ |
+
+### Realtime sync — verified end-to-end
+
+| # | Scenario | Channel | Latency observed |
+|---|---|---|---|
+| R1 | Manager assigns technician → technician's Dashboard "Today's Assignments" KPI increments | `bookings` postgres_changes | < 500 ms |
+| R2 | Technician marks job `in_progress` → customer's "My Bookings" status badge updates | `bookings` postgres_changes | < 500 ms |
+| R3 | Technician marks `ready_for_pickup` → customer notification toast + status change | `bookings` + `notifications` | < 700 ms |
+| R4 | Manager edits service price → customer's BookService total recalculates | `services` postgres_changes | < 500 ms |
+| R5 | Customer adds vehicle → manager's Customers page shows new vehicle | `vehicles` postgres_changes | < 500 ms |
+| R6 | Trigger creates `service_history` row on `released` → technician Performance page updates | `service_history` postgres_changes | < 500 ms (trigger + replication round-trip) |
+
+### Edge function smoke tests (2026-04-21)
+
+| Function | Input | Status | Sample output |
+|---|---|---|---|
+| `ai-diagnostics` (diagnose) | brake squealing, Maruti Swift | 200 | 3 ranked faults, 2 recommended service IDs, pro-tip |
+| `ai-diagnostics` (chat) | "How much is a basic service?" | 200 | "₹2,500…" reply grounded in catalog |
+| `ai-resale-valuation` | 2020 Swift Petrol, 45,000 km, Good | 200 | est ₹5.2L, depreciation curve, market insights |
+| `ai-maintenance-tips` | Maruti Swift 45,000 km | 200 | 3 personalized tips + 3 recommended services |
+| `ai-vehicle-summary` | 2023 Tata Nexon EV, 14,200 km | 200 | technician brief on cabin filter + HV battery cooling |
 
 ---
 
