@@ -74,7 +74,7 @@ const EmployeeJobDetail = () => {
     // Optimistic update — reflect change immediately in local state
     setBooking((prev) => prev ? { ...prev, status: newStatus } : prev);
     setSaving(true);
-    const patch: Record<string, any> = { status: newStatus as any, notes };
+    const patch: any = { status: newStatus, notes };
     if (newStatus === "checked_in") patch.checked_in_at = new Date().toISOString();
     if (newStatus === "released") patch.released_at = new Date().toISOString();
     const { error } = await supabase
