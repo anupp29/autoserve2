@@ -23,6 +23,8 @@ const ManagerInventory = () => {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
+  const [restockTarget, setRestockTarget] = useState<Item | null>(null);
+  const [restockBusy, setRestockBusy] = useState(false);
 
   // Optimistic overrides for instant restock feedback
   const [optimistic, setOptimistic] = useState<Record<string, Partial<Item>>>({});
