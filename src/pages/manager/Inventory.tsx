@@ -75,17 +75,22 @@ const ManagerInventory = () => {
     setShowForm(false);
   };
 
-  const restock = async (i: Item) => {
-    const target = i.reorder_level * 4;
-    // Optimistic update
-    setOptimistic((prev) => ({ ...prev, [i.id]: { ...prev[i.id], quantity: target } }));
-    const { error } = await supabase.from("inventory").update({ quantity: target }).eq("id", i.id);
+  const restock = (i: Item) => setRestockTarget(i);
+
+  const confirmRestock = async (qty: number) => {
+    if (!restockTarget) return;
+    const target = restockTarget.quantity + qty;
+    setRestockBusy(true);
+    setOptimistic((prev) => ({ ...prev, [restockTarget.id]: { ...prev[restockTarget.id], quantity: target } }));
+    const { error } = await supabase.from("inventory").update({ quantity: target }).eq("id", restockTarget.id);
+    setRestockBusy(false);
     if (error) {
-      setOptimistic((prev) => { const { [i.id]: _, ...next } = prev; return next; });
+      setOptimistic((prev) => { const { [restockTarget.id]: _, ...next } = prev; return next; });
       toast.error(error.message);
-    } else {
-      toast.success(`Restocked ${i.name} to ${target}`);
+      return;
     }
+    toast.success(`Added ${qty} × ${restockTarget.name} (now ${target})`);
+    setRestockTarget(null);
   };
 
   const remove = async (i: Item) => {
