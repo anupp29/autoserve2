@@ -32,9 +32,13 @@ const TopBar = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState<DbNotification[]>([]);
+  const [soundOn, setSoundOnState] = useState<boolean>(() => isSoundEnabled());
   const notifRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  // Track the latest notification id we've already seen so we only chime on truly new ones
+  const lastSeenIdRef = useRef<string | null>(null);
+  const initialisedRef = useRef(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -48,20 +52,49 @@ const TopBar = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(20);
-      setNotifications((data as DbNotification[]) ?? []);
+      const rows = (data as DbNotification[]) ?? [];
+      setNotifications(rows);
+      if (!initialisedRef.current) {
+        lastSeenIdRef.current = rows[0]?.id ?? null;
+        initialisedRef.current = true;
+      }
     };
     load();
 
     const channel = supabase
       .channel(`notifications-${user.id}`)
       .on("postgres_changes",
-        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const row = payload.new as DbNotification;
+          if (initialisedRef.current && row.id !== lastSeenIdRef.current) {
+            lastSeenIdRef.current = row.id;
+            if (isSoundEnabled()) playTing();
+            toast.message(row.title, { description: row.message });
+          }
+          load();
+        }
+      )
+      .on("postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => load()
+      )
+      .on("postgres_changes",
+        { event: "DELETE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
         () => load()
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    setSoundOnState(next);
+    if (next) playTing();
+    toast.success(next ? "Notification sound on" : "Notification sound off");
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
