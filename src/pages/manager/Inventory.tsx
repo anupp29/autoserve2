@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { formatINR } from "@/lib/format";
 import { toast } from "sonner";
+import QuantityPromptDialog from "@/components/QuantityPromptDialog";
 
 interface Item {
   id: string; name: string; sku: string; category: string; quantity: number;
@@ -22,6 +23,8 @@ const ManagerInventory = () => {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
+  const [restockTarget, setRestockTarget] = useState<Item | null>(null);
+  const [restockBusy, setRestockBusy] = useState(false);
 
   // Optimistic overrides for instant restock feedback
   const [optimistic, setOptimistic] = useState<Record<string, Partial<Item>>>({});
@@ -72,17 +75,22 @@ const ManagerInventory = () => {
     setShowForm(false);
   };
 
-  const restock = async (i: Item) => {
-    const target = i.reorder_level * 4;
-    // Optimistic update
-    setOptimistic((prev) => ({ ...prev, [i.id]: { ...prev[i.id], quantity: target } }));
-    const { error } = await supabase.from("inventory").update({ quantity: target }).eq("id", i.id);
+  const restock = (i: Item) => setRestockTarget(i);
+
+  const confirmRestock = async (qty: number) => {
+    if (!restockTarget) return;
+    const target = restockTarget.quantity + qty;
+    setRestockBusy(true);
+    setOptimistic((prev) => ({ ...prev, [restockTarget.id]: { ...prev[restockTarget.id], quantity: target } }));
+    const { error } = await supabase.from("inventory").update({ quantity: target }).eq("id", restockTarget.id);
+    setRestockBusy(false);
     if (error) {
-      setOptimistic((prev) => { const { [i.id]: _, ...next } = prev; return next; });
+      setOptimistic((prev) => { const { [restockTarget.id]: _, ...next } = prev; return next; });
       toast.error(error.message);
-    } else {
-      toast.success(`Restocked ${i.name} to ${target}`);
+      return;
     }
+    toast.success(`Added ${qty} × ${restockTarget.name} (now ${target})`);
+    setRestockTarget(null);
   };
 
   const remove = async (i: Item) => {
@@ -205,6 +213,19 @@ const ManagerInventory = () => {
           </div>
         </div>
       )}
+
+      <QuantityPromptDialog
+        open={!!restockTarget}
+        title={restockTarget ? `Restock ${restockTarget.name}` : ""}
+        description={restockTarget ? `Current stock: ${restockTarget.quantity} • Reorder at ${restockTarget.reorder_level}` : undefined}
+        label="Quantity to add"
+        confirmLabel="Add to Stock"
+        defaultValue={restockTarget ? Math.max(restockTarget.reorder_level * 2 - restockTarget.quantity, 1) : 1}
+        min={1}
+        busy={restockBusy}
+        onConfirm={confirmRestock}
+        onCancel={() => setRestockTarget(null)}
+      />
     </div>
   );
 };

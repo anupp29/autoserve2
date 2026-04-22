@@ -112,22 +112,55 @@ const ScanHandoff = () => {
             <input
               autoFocus
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onChange={(e) => setCode(e.target.value.toUpperCase().trim())}
+              onPaste={(e) => {
+                const txt = e.clipboardData.getData("text").trim().toUpperCase();
+                const match = txt.match(/(DROP|PICK)-[A-Z0-9]+/);
+                if (match) {
+                  e.preventDefault();
+                  setCode(match[0]);
+                }
+              }}
               placeholder="DROP-XXXXXXXX or PICK-XXXXXXXX"
               className="w-full pl-10 pr-3 py-3 bg-surface-container-low border border-border/30 rounded-lg font-mono text-sm uppercase tracking-wider focus:ring-2 focus:ring-primary/20 outline-none"
             />
           </div>
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || !code.trim()}
             className="px-5 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50 active:scale-[0.98] transition-all flex items-center gap-2"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
             Lookup
           </button>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-2">
-          Tip: Use a barcode scanner connected over USB — it will type the code and submit automatically.
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <button
+            type="button"
+            onClick={() => setCode("DROP-")}
+            className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
+          >
+            <Car className="w-3 h-3 inline mr-1" /> Drop-off
+          </button>
+          <button
+            type="button"
+            onClick={() => setCode("PICK-")}
+            className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-100 transition-colors"
+          >
+            <ShieldCheck className="w-3 h-3 inline mr-1" /> Pick-up
+          </button>
+          {code && (
+            <button
+              type="button"
+              onClick={() => setCode("")}
+              className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 bg-surface-container text-muted-foreground rounded-full hover:bg-surface-container-high transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-3">
+          Tip: USB barcode scanners type the code and submit automatically. You can also paste a full QR payload — the code is auto-extracted.
         </p>
       </form>
 

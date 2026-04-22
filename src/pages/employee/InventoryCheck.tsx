@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { formatINR } from "@/lib/format";
 import { toast } from "sonner";
+import QuantityPromptDialog from "@/components/QuantityPromptDialog";
 
 interface Item {
   id: string; name: string; sku: string; category: string; quantity: number;
@@ -13,9 +14,10 @@ interface Item {
 const EmployeeInventoryCheck = () => {
   const { data: items } = useLiveTable<Item>("inventory", (q) => q.order("name"));
   const [search, setSearch] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [consumeTarget, setConsumeTarget] = useState<Item | null>(null);
 
-  // Optimistic overrides for instant "Use 1" feedback
+  // Optimistic overrides for instant feedback
   const [optimistic, setOptimistic] = useState<Record<string, Partial<Item>>>({});
   useEffect(() => { setOptimistic({}); }, [items]);
 
@@ -30,22 +32,29 @@ const EmployeeInventoryCheck = () => {
   const totalSkus = displayed.length;
   const totalValue = displayed.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
 
-  const consume = async (item: Item) => {
+  const openConsume = (item: Item) => {
     if (item.quantity <= 0) return;
-    const newQty = item.quantity - 1;
-    // Optimistic update
+    setConsumeTarget(item);
+  };
+
+  const confirmConsume = async (qty: number) => {
+    if (!consumeTarget) return;
+    const item = consumeTarget;
+    const safeQty = Math.max(1, Math.min(qty, item.quantity));
+    const newQty = item.quantity - safeQty;
     setOptimistic((prev) => ({ ...prev, [item.id]: { ...prev[item.id], quantity: newQty } }));
-    setBusy(item.id);
+    setBusy(true);
     const { error } = await supabase
       .from("inventory")
       .update({ quantity: newQty })
       .eq("id", item.id);
-    setBusy(null);
+    setBusy(false);
     if (error) {
       setOptimistic((prev) => { const { [item.id]: _, ...next } = prev; return next; });
       toast.error(error.message);
     } else {
-      toast.success(`Used 1 × ${item.name}`);
+      toast.success(`Logged ${safeQty} × ${item.name} used`);
+      setConsumeTarget(null);
     }
   };
 
@@ -108,9 +117,9 @@ const EmployeeInventoryCheck = () => {
                   <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${isCritical ? "text-destructive bg-destructive/10" : isLow ? "text-amber-700 bg-amber-100" : "text-emerald-700 bg-emerald-100"}`}>
                     {isCritical ? "Critical" : isLow ? "Low" : "OK"}
                   </span>
-                  <button onClick={() => consume(p)} disabled={busy === p.id || p.quantity <= 0}
+                  <button onClick={() => openConsume(p)} disabled={busy || p.quantity <= 0}
                     className="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-40">
-                    <Minus className="w-3 h-3" /> Use 1
+                    <Minus className="w-3 h-3" /> Log Use
                   </button>
                 </div>
               </div>
@@ -118,6 +127,20 @@ const EmployeeInventoryCheck = () => {
           })}
         </div>
       </div>
+
+      <QuantityPromptDialog
+        open={!!consumeTarget}
+        title={consumeTarget ? `Log usage — ${consumeTarget.name}` : ""}
+        description={consumeTarget ? `Available: ${consumeTarget.quantity} ${consumeTarget.quantity === 1 ? "unit" : "units"}` : undefined}
+        label="Quantity used"
+        confirmLabel="Log Usage"
+        defaultValue={1}
+        min={1}
+        max={consumeTarget?.quantity}
+        busy={busy}
+        onConfirm={confirmConsume}
+        onCancel={() => setConsumeTarget(null)}
+      />
     </div>
   );
 };
