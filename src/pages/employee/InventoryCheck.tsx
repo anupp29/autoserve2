@@ -117,9 +117,9 @@ const EmployeeInventoryCheck = () => {
                   <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${isCritical ? "text-destructive bg-destructive/10" : isLow ? "text-amber-700 bg-amber-100" : "text-emerald-700 bg-emerald-100"}`}>
                     {isCritical ? "Critical" : isLow ? "Low" : "OK"}
                   </span>
-                  <button onClick={() => consume(p)} disabled={busy === p.id || p.quantity <= 0}
+                  <button onClick={() => openConsume(p)} disabled={busy || p.quantity <= 0}
                     className="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-40">
-                    <Minus className="w-3 h-3" /> Use 1
+                    <Minus className="w-3 h-3" /> Log Use
                   </button>
                 </div>
               </div>
@@ -127,6 +127,20 @@ const EmployeeInventoryCheck = () => {
           })}
         </div>
       </div>
+
+      <QuantityPromptDialog
+        open={!!consumeTarget}
+        title={consumeTarget ? `Log usage — ${consumeTarget.name}` : ""}
+        description={consumeTarget ? `Available: ${consumeTarget.quantity} ${consumeTarget.quantity === 1 ? "unit" : "units"}` : undefined}
+        label="Quantity used"
+        confirmLabel="Log Usage"
+        defaultValue={1}
+        min={1}
+        max={consumeTarget?.quantity}
+        busy={busy}
+        onConfirm={confirmConsume}
+        onCancel={() => setConsumeTarget(null)}
+      />
     </div>
   );
 };
