@@ -213,6 +213,19 @@ const ManagerInventory = () => {
           </div>
         </div>
       )}
+
+      <QuantityPromptDialog
+        open={!!restockTarget}
+        title={restockTarget ? `Restock ${restockTarget.name}` : ""}
+        description={restockTarget ? `Current stock: ${restockTarget.quantity} • Reorder at ${restockTarget.reorder_level}` : undefined}
+        label="Quantity to add"
+        confirmLabel="Add to Stock"
+        defaultValue={restockTarget ? Math.max(restockTarget.reorder_level * 2 - restockTarget.quantity, 1) : 1}
+        min={1}
+        busy={restockBusy}
+        onConfirm={confirmRestock}
+        onCancel={() => setRestockTarget(null)}
+      />
     </div>
   );
 };
