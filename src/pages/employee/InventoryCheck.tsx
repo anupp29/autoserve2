@@ -14,9 +14,10 @@ interface Item {
 const EmployeeInventoryCheck = () => {
   const { data: items } = useLiveTable<Item>("inventory", (q) => q.order("name"));
   const [search, setSearch] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [consumeTarget, setConsumeTarget] = useState<Item | null>(null);
 
-  // Optimistic overrides for instant "Use 1" feedback
+  // Optimistic overrides for instant feedback
   const [optimistic, setOptimistic] = useState<Record<string, Partial<Item>>>({});
   useEffect(() => { setOptimistic({}); }, [items]);
 
@@ -31,22 +32,29 @@ const EmployeeInventoryCheck = () => {
   const totalSkus = displayed.length;
   const totalValue = displayed.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
 
-  const consume = async (item: Item) => {
+  const openConsume = (item: Item) => {
     if (item.quantity <= 0) return;
-    const newQty = item.quantity - 1;
-    // Optimistic update
+    setConsumeTarget(item);
+  };
+
+  const confirmConsume = async (qty: number) => {
+    if (!consumeTarget) return;
+    const item = consumeTarget;
+    const safeQty = Math.max(1, Math.min(qty, item.quantity));
+    const newQty = item.quantity - safeQty;
     setOptimistic((prev) => ({ ...prev, [item.id]: { ...prev[item.id], quantity: newQty } }));
-    setBusy(item.id);
+    setBusy(true);
     const { error } = await supabase
       .from("inventory")
       .update({ quantity: newQty })
       .eq("id", item.id);
-    setBusy(null);
+    setBusy(false);
     if (error) {
       setOptimistic((prev) => { const { [item.id]: _, ...next } = prev; return next; });
       toast.error(error.message);
     } else {
-      toast.success(`Used 1 × ${item.name}`);
+      toast.success(`Logged ${safeQty} × ${item.name} used`);
+      setConsumeTarget(null);
     }
   };
 
