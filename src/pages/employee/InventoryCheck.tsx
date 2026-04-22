@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { formatINR } from "@/lib/format";
 import { toast } from "sonner";
+import QuantityPromptDialog from "@/components/QuantityPromptDialog";
 
 interface Item {
   id: string; name: string; sku: string; category: string; quantity: number;
