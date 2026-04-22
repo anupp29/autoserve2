@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Settings, Wrench, Calendar, AlertTriangle, Info, CheckCircle2, LogOut, User } from "lucide-react";
+import { Bell, Settings, AlertTriangle, Info, CheckCircle2, LogOut, User, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
 import { toast } from "sonner";
+import { playTing, isSoundEnabled, setSoundEnabled } from "@/lib/notificationSound";
 
 interface DbNotification {
   id: string;
