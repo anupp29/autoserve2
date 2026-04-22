@@ -127,6 +127,16 @@ const TopBar = () => {
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2 ml-auto">
+        {/* Sound toggle */}
+        <button
+          onClick={toggleSound}
+          className="p-2 text-muted-foreground hover:bg-surface-container rounded-full transition-colors"
+          aria-label={soundOn ? "Mute notification sound" : "Unmute notification sound"}
+          title={soundOn ? "Notification sound on" : "Notification sound muted"}
+        >
+          {soundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+        </button>
+
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button
