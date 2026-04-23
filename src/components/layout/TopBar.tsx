@@ -254,6 +254,7 @@ const TopBar = () => {
           )}
         </div>
       </div>
+      <EditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />
     </div>
   );
 };

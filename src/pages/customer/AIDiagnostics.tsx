@@ -1,6 +1,6 @@
 // Production AI diagnostics page: real symptom analysis, ranked faults, recommended services from the catalog.
 import { useState } from "react";
-import { FileText, Clock, Zap, Lightbulb, Loader2, Wrench, Sparkles } from "lucide-react";
+import { FileText, Clock, Zap, Lightbulb, Loader2, Wrench, Sparkles, Shield, BookOpen } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -12,9 +12,11 @@ interface Vehicle { id: string; make: string; model: string; year: number; milea
 interface Service { id: string; name: string; description: string | null; category: string; price: number; }
 
 interface Diagnosis {
-  faults: { name: string; description: string; confidence: number }[];
+  faults: { name: string; description: string; confidence: number; citation_indices?: number[] }[];
   recommended_service_ids: string[];
   proTip: string;
+  citations?: { index: number; title: string; category: string; source: string }[];
+  guardrails?: { rag_sources_used?: number; pii_redacted?: string[]; injection_detected?: boolean };
 }
 
 const AIDiagnostics = () => {
