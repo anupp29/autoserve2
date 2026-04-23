@@ -189,6 +189,40 @@ const AIDiagnostics = () => {
               <p className="text-xs text-muted-foreground leading-relaxed">{result.proTip}</p>
             </div>
           )}
+
+          {result?.citations && result.citations.length > 0 && (
+            <div className="bg-card p-4 rounded-xl border border-border/20 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="w-3.5 h-3.5 text-primary" />
+                <p className="text-xs font-bold text-on-surface">Knowledge Sources</p>
+                <span className="ml-auto text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">RAG</span>
+              </div>
+              <ul className="space-y-1.5">
+                {result.citations.map((c) => (
+                  <li key={c.index} className="flex items-start gap-2 text-[11px] text-muted-foreground">
+                    <span className="font-mono font-bold text-primary shrink-0">[{c.index}]</span>
+                    <span>
+                      <span className="font-semibold text-on-surface">{c.title}</span>
+                      <span className="text-muted-foreground/70"> · {c.source}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result?.guardrails && (result.guardrails.injection_detected || (result.guardrails.pii_redacted?.length ?? 0) > 0) && (
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-3.5 h-3.5 text-amber-600" />
+                <p className="text-xs font-bold text-amber-900">Safety Filter Applied</p>
+              </div>
+              <p className="text-[11px] text-amber-800">
+                {result.guardrails.injection_detected && "We neutralised an unsafe instruction in your prompt. "}
+                {(result.guardrails.pii_redacted?.length ?? 0) > 0 && `We redacted ${result.guardrails.pii_redacted!.join(", ")} before sending to the AI.`}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
