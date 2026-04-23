@@ -148,7 +148,9 @@ describe("AI Guardrails — RAG retrieval", () => {
   });
 
   it("returns empty when nothing matches", () => {
-    const result = retrieveKnowledge("the weather is sunny today", entries);
+    // No symptom/keyword overlap. Use entries without 'all' applies_to so the +1 fuel-bonus does not fire.
+    const narrowEntries: KE[] = entries.map((e) => ({ ...e, applies_to: e.applies_to.filter((x) => x !== "all") }));
+    const result = retrieveKnowledge("the weather is sunny today", narrowEntries);
     expect(result).toEqual([]);
   });
 
