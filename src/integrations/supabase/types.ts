@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      automotive_knowledge: {
+        Row: {
+          applies_to: string[]
+          body: string
+          category: string
+          created_at: string
+          id: string
+          keywords: string[]
+          source: string
+          symptoms: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applies_to?: string[]
+          body: string
+          category: string
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          source?: string
+          symptoms?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applies_to?: string[]
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          source?: string
+          symptoms?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           assigned_to: string | null

@@ -1,6 +1,6 @@
 // Production AI diagnostics page: real symptom analysis, ranked faults, recommended services from the catalog.
 import { useState } from "react";
-import { FileText, Clock, Zap, Lightbulb, Loader2, Wrench, Sparkles } from "lucide-react";
+import { FileText, Clock, Zap, Lightbulb, Loader2, Wrench, Sparkles, Shield, BookOpen } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
@@ -12,9 +12,11 @@ interface Vehicle { id: string; make: string; model: string; year: number; milea
 interface Service { id: string; name: string; description: string | null; category: string; price: number; }
 
 interface Diagnosis {
-  faults: { name: string; description: string; confidence: number }[];
+  faults: { name: string; description: string; confidence: number; citation_indices?: number[] }[];
   recommended_service_ids: string[];
   proTip: string;
+  citations?: { index: number; title: string; category: string; source: string }[];
+  guardrails?: { rag_sources_used?: number; pii_redacted?: string[]; injection_detected?: boolean };
 }
 
 const AIDiagnostics = () => {
@@ -185,6 +187,40 @@ const AIDiagnostics = () => {
                 <p className="text-xs font-bold text-on-surface">AI Pro-Tip</p>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">{result.proTip}</p>
+            </div>
+          )}
+
+          {result?.citations && result.citations.length > 0 && (
+            <div className="bg-card p-4 rounded-xl border border-border/20 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="w-3.5 h-3.5 text-primary" />
+                <p className="text-xs font-bold text-on-surface">Knowledge Sources</p>
+                <span className="ml-auto text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">RAG</span>
+              </div>
+              <ul className="space-y-1.5">
+                {result.citations.map((c) => (
+                  <li key={c.index} className="flex items-start gap-2 text-[11px] text-muted-foreground">
+                    <span className="font-mono font-bold text-primary shrink-0">[{c.index}]</span>
+                    <span>
+                      <span className="font-semibold text-on-surface">{c.title}</span>
+                      <span className="text-muted-foreground/70"> · {c.source}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result?.guardrails && (result.guardrails.injection_detected || (result.guardrails.pii_redacted?.length ?? 0) > 0) && (
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-3.5 h-3.5 text-amber-600" />
+                <p className="text-xs font-bold text-amber-900">Safety Filter Applied</p>
+              </div>
+              <p className="text-[11px] text-amber-800">
+                {result.guardrails.injection_detected && "We neutralised an unsafe instruction in your prompt. "}
+                {(result.guardrails.pii_redacted?.length ?? 0) > 0 && `We redacted ${result.guardrails.pii_redacted!.join(", ")} before sending to the AI.`}
+              </p>
             </div>
           )}
         </div>

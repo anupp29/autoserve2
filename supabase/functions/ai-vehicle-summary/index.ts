@@ -1,24 +1,26 @@
-// Generates an AI-written maintenance summary for a vehicle from its service history.
-// Used on Employee JobDetail page so technicians get a fast brief on past work.
+// =====================================================================
+// AI Vehicle Summary — concise technician briefing from service history
 //
 // Accepts EITHER:
-//   { vehicle_id }                                          — server fetches everything
-//   { vehicle: {...}, history: [...], current_service? }    — client supplies context
+//   { vehicle_id }                                       — server fetches
+//   { vehicle, history, current_service? }               — client-supplied
+// =====================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  corsHeaders, json, rateLimitOk, callLovableAi,
+  retrieveKnowledge, formatKnowledgeForPrompt, safeStr, logAiCall,
+  KnowledgeEntry,
+} from "../_shared/aiGuardrails.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const rl = rateLimitOk(req);
+  if (!rl.ok) return json(429, { error: "Too many requests" }, { "Retry-After": String(rl.retryAfter ?? 30) });
 
   try {
     const body = await req.json();
@@ -47,6 +49,15 @@ Deno.serve(async (req) => {
       return `- ${date} • ${h.service ?? "Service"} • ${h.mileage_at_service ?? "?"} km • ₹${h.cost ?? "?"} • Notes: ${h.notes ?? "—"} • Parts: ${h.parts_used ?? "—"}`;
     }).join("\n");
 
+    // RAG: pull entries relevant to vehicle + current service
+    const ragQuery = `${vehicle.make ?? ""} ${vehicle.model ?? ""} ${vehicle.fuel_type ?? "petrol"} ${currentService ?? ""} ${history.slice(0, 3).map((h: any) => h.service ?? "").join(" ")}`;
+    const { data: kb } = await admin.from("automotive_knowledge").select("*");
+    const matches = retrieveKnowledge(ragQuery, (kb ?? []) as KnowledgeEntry[], {
+      fuelType: vehicle.fuel_type,
+      topK: 2,
+    });
+    const knowledgeBlock = formatKnowledgeForPrompt(matches);
+
     const prompt = `You are an expert automotive service advisor briefing a technician about to work on this vehicle.
 
 Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.fuel_type ?? "Petrol"})
@@ -57,6 +68,9 @@ ${currentService ? `Today's job: ${currentService}` : ""}
 Service history (most recent first):
 ${histLines || "No prior service history."}
 
+EXPERT REFERENCE:
+${knowledgeBlock}
+
 Write a concise 4-6 line briefing that:
 1. Summarises the vehicle's overall maintenance state (well-maintained / needs attention / new vehicle).
 2. Highlights any recurring issues or patterns.
@@ -65,38 +79,25 @@ Write a concise 4-6 line briefing that:
 
 Use plain, clear language. Flowing paragraphs only — no bullet points. Address the technician, not the customer.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You are a senior automotive service advisor. Be concise, technical and actionable." },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const ai = await callLovableAi({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: "You are a senior automotive service advisor. Be concise, technical and actionable. Ground your reasoning in the supplied reference when applicable." },
+        { role: "user", content: prompt },
+      ],
     });
+    logAiCall({ function: "ai-vehicle-summary", ragMatches: matches.length, ai });
 
-    if (aiRes.status === 429) return json(429, { error: "Rate limited, please retry shortly" });
-    if (aiRes.status === 402) return json(402, { error: "AI credits exhausted" });
-    if (!aiRes.ok) {
-      const text = await aiRes.text();
-      console.error("AI error", aiRes.status, text);
-      return json(500, { error: `AI error ${aiRes.status}` });
-    }
+    if (!ai.ok) return json(ai.status === 402 ? 402 : 503, { error: ai.error ?? "AI temporarily unavailable" });
 
-    const data = await aiRes.json();
-    const summary = data?.choices?.[0]?.message?.content ?? "Unable to generate summary.";
-    return json(200, { summary });
+    const summary = safeStr(ai.data?.choices?.[0]?.message?.content, "Unable to generate summary.").slice(0, 1500);
+    return json(200, {
+      summary,
+      citations: matches.map((m, i) => ({ index: i + 1, title: m.title, source: m.source })),
+      guardrails: { rag_sources_used: matches.length, ai_retries: ai.retries, ai_latency_ms: ai.latencyMs },
+    });
   } catch (e) {
-    console.error(e);
-    return json(500, { error: String(e) });
+    console.error("ai-vehicle-summary fatal", e);
+    return json(500, { error: String(e instanceof Error ? e.message : e) });
   }
 });
-
-function json(status: number, body: any) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}

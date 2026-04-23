@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
 import { toast } from "sonner";
 import { playTing, isSoundEnabled, setSoundEnabled } from "@/lib/notificationSound";
+import EditProfileDialog from "@/components/EditProfileDialog";
 
 interface DbNotification {
   id: string;
@@ -31,6 +32,7 @@ const TopBar = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [notifications, setNotifications] = useState<DbNotification[]>([]);
   const [soundOn, setSoundOnState] = useState<boolean>(() => isSoundEnabled());
   const notifRef = useRef<HTMLDivElement>(null);
@@ -235,8 +237,11 @@ const TopBar = () => {
                 <p className="text-[11px] text-muted-foreground">{user?.email}</p>
               </div>
               <div className="p-2">
-                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container-low text-left text-sm text-on-surface">
-                  <User className="w-4 h-4 text-muted-foreground" /> My Profile
+                <button
+                  onClick={() => { setShowProfile(false); setEditProfileOpen(true); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container-low text-left text-sm text-on-surface"
+                >
+                  <User className="w-4 h-4 text-muted-foreground" /> Edit Profile
                 </button>
                 <button
                   onClick={handleLogout}
@@ -249,6 +254,7 @@ const TopBar = () => {
           )}
         </div>
       </div>
+      <EditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />
     </div>
   );
 };
