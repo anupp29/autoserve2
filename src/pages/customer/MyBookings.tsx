@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime, formatINR } from "@/lib/format";
 import { toast } from "sonner";
 import BookingQRDialog from "@/components/BookingQRDialog";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface Booking {
   id: string;
