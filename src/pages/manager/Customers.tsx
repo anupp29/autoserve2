@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Users, Star, Activity } from "lucide-react";
+import { Search, Users, Star, Activity, UserPlus } from "lucide-react";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
 import { formatINR, formatDate, initials } from "@/lib/format";
@@ -7,6 +7,7 @@ import { formatINR, formatDate, initials } from "@/lib/format";
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; owner_id: string; }
 interface Booking { id: string; customer_id: string; total_cost: number | null; status: string; }
 interface History { id: string; customer_id: string; cost: number; service_date: string; }
+interface ProfileRow { user_id: string; created_at: string; }
 
 const ManagerCustomers = () => {
   const { profiles: customers } = useProfilesByRole("customer");
