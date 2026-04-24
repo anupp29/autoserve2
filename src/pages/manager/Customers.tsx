@@ -93,14 +93,21 @@ const ManagerCustomers = () => {
                 const myHistory = history.filter((h) => h.customer_id === c.user_id);
                 const spend = myHistory.reduce((s, h) => s + Number(h.cost || 0), 0);
                 const last = myHistory.sort((a, b) => +new Date(b.service_date) - +new Date(a.service_date))[0];
+                const joinedAt = createdMap[c.user_id];
+                const isNew = joinedAt && +new Date(joinedAt) >= sevenDaysAgo;
                 return (
                   <tr key={c.user_id} className="hover:bg-surface-container-low/50 transition-colors">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{initials(c.full_name)}</div>
                         <div>
-                          <p className="text-sm font-semibold text-on-surface">{c.full_name}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono">#{c.user_id.slice(0, 8)}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-on-surface">{c.full_name}</p>
+                            {isNew && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">New</span>}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            #{c.user_id.slice(0, 8)}{joinedAt ? ` • Joined ${formatDate(joinedAt)}` : ""}
+                          </p>
                         </div>
                       </div>
                     </td>
