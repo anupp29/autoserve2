@@ -66,6 +66,46 @@ const BookService = () => {
     [primary, services, selectedIds]
   );
 
+  // AI-powered recommendations (smart hybrid: rule-based shortlist + LLM ranking)
+  const [aiRecs, setAiRecs] = useState<Array<{ id: string; reason: string; confidence: number }>>([]);
+  const [aiRecsLoading, setAiRecsLoading] = useState(false);
+  useEffect(() => {
+    if (selectedIds.size === 0 || services.length === 0 || !user) {
+      setAiRecs([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      setAiRecsLoading(true);
+      try {
+        const veh = vehicles.find((v) => v.id === selectedVehicle) ?? vehicles[0];
+        const { data: hist } = await supabase
+          .from("service_history")
+          .select("service_date, service_id")
+          .eq("customer_id", user.id)
+          .order("service_date", { ascending: false })
+          .limit(8);
+        const enrichedHist = (hist ?? []).map((h: any) => ({
+          service_date: h.service_date,
+          service_name: services.find((s) => s.id === h.service_id)?.name,
+        }));
+        const { data, error } = await supabase.functions.invoke("ai-service-recommender", {
+          body: {
+            vehicle: veh ? { make: veh.make, model: veh.model, year: veh.year } : null,
+            selected_service_ids: Array.from(selectedIds),
+            candidate_services: services.map((s) => ({ id: s.id, name: s.name, category: s.category, price: s.price, description: (s as any).description })),
+            history: enrichedHist,
+          },
+        });
+        if (!error && data?.recommendations) setAiRecs(data.recommendations);
+      } catch {
+        // silent — fall back to rule-based recommended
+      } finally {
+        setAiRecsLoading(false);
+      }
+    }, 600); // debounce
+    return () => clearTimeout(handle);
+  }, [selectedIds, services, vehicles, selectedVehicle, user]);
+
   const subtotal = selectedServices.reduce((s, x) => s + Number(x.price || 0), 0);
   const totalDuration = selectedServices.reduce((s, x) => s + (x.duration_minutes || 0), 0);
   const surcharge = subtotal * (PRIORITY_MULTIPLIER[priority] - 1);
