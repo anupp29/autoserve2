@@ -59,8 +59,8 @@ const ManagerCustomers = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Kpi label="Total Customers" value={String(customers.length)} icon={Users} bg="bg-primary/10" color="text-primary" />
-        <Kpi label="Total Vehicles" value={String(vehicles.length)} icon={Star} bg="bg-amber-50" color="text-amber-600" />
-        <Kpi label="Active Bookings" value={String(activeBookings)} icon={Activity} bg="bg-emerald-50" color="text-emerald-600" />
+        <Kpi label="New This Week" value={String(newThisWeek)} icon={UserPlus} bg="bg-emerald-50" color="text-emerald-600" />
+        <Kpi label="Active Bookings" value={String(activeBookings)} icon={Activity} bg="bg-amber-50" color="text-amber-600" />
         <Kpi label="Avg. Lifetime Value" value={formatINR(avgLtv)} icon={Star} bg="bg-primary/10" color="text-primary" mono />
       </div>
 
