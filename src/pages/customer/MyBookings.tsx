@@ -43,6 +43,8 @@ const CustomerBookings = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("All");
   const [qr, setQr] = useState<{ id: string; type: "dropoff" | "pickup" } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
 
   const { data: bookings, loading } = useLiveTable<Booking>("bookings", (q) => q.eq("customer_id", user?.id ?? "").order("scheduled_at", { ascending: false }), [user?.id], { enabled: !!user });
   const { data: vehiclesArr } = useLiveTable<Vehicle>("vehicles", (q) => q.eq("owner_id", user?.id ?? ""), [user?.id], { enabled: !!user });
