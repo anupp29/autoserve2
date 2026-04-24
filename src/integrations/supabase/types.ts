@@ -56,6 +56,9 @@ export type Database = {
       bookings: {
         Row: {
           assigned_to: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           checked_in_at: string | null
           created_at: string
           customer_id: string
@@ -75,6 +78,9 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           checked_in_at?: string | null
           created_at?: string
           customer_id: string
@@ -94,6 +100,9 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           checked_in_at?: string | null
           created_at?: string
           customer_id?: string
