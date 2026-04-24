@@ -94,7 +94,7 @@ Use realistic Indian used-car dealer prices (CarDekho / OLX / Cars24 averages). 
           months: Math.max(0, Math.round(Number(d.months ?? 0))),
           value: Math.max(0, Math.round(Number(d.value ?? 0))),
         }))
-        .filter((d) => d.value > 0)
+        .filter((d: { months: number; value: number }) => d.value > 0)
         .slice(0, 8);
     }
     if (depreciation.length === 0) {
