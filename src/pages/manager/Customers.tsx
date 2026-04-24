@@ -14,19 +14,41 @@ const ManagerCustomers = () => {
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q);
   const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q);
   const { data: history } = useLiveTable<History>("service_history", (q) => q);
+  // Fetch created_at from profiles for "new" badges + sort.
+  const { data: profileMeta } = useLiveTable<ProfileRow>("profiles", (q) => q.order("created_at", { ascending: false }));
+  const createdMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    profileMeta.forEach((p) => { m[p.user_id] = p.created_at; });
+    return m;
+  }, [profileMeta]);
+
   const [search, setSearch] = useState("");
 
+  const sortedCustomers = useMemo(
+    () => [...customers].sort((a, b) => {
+      const ta = createdMap[a.user_id] ? +new Date(createdMap[a.user_id]) : 0;
+      const tb = createdMap[b.user_id] ? +new Date(createdMap[b.user_id]) : 0;
+      return tb - ta; // newest first
+    }),
+    [customers, createdMap]
+  );
+
   const filtered = useMemo(() => {
-    return customers.filter((c) => {
+    return sortedCustomers.filter((c) => {
       if (!search) return true;
       const hay = `${c.full_name} ${c.phone ?? ""}`.toLowerCase();
       return hay.includes(search.toLowerCase());
     });
-  }, [customers, search]);
+  }, [sortedCustomers, search]);
 
   const totalSpend = history.reduce((s, h) => s + Number(h.cost || 0), 0);
   const avgLtv = customers.length ? totalSpend / customers.length : 0;
   const activeBookings = bookings.filter((b) => b.status !== "completed" && b.status !== "cancelled").length;
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const newThisWeek = customers.filter((c) => {
+    const t = createdMap[c.user_id] ? +new Date(createdMap[c.user_id]) : 0;
+    return t >= sevenDaysAgo;
+  }).length;
 
   return (
     <div className="space-y-8">
