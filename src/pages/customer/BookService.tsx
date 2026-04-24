@@ -66,6 +66,46 @@ const BookService = () => {
     [primary, services, selectedIds]
   );
 
+  // AI-powered recommendations (smart hybrid: rule-based shortlist + LLM ranking)
+  const [aiRecs, setAiRecs] = useState<Array<{ id: string; reason: string; confidence: number }>>([]);
+  const [aiRecsLoading, setAiRecsLoading] = useState(false);
+  useEffect(() => {
+    if (selectedIds.size === 0 || services.length === 0 || !user) {
+      setAiRecs([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      setAiRecsLoading(true);
+      try {
+        const veh = vehicles.find((v) => v.id === selectedVehicle) ?? vehicles[0];
+        const { data: hist } = await supabase
+          .from("service_history")
+          .select("service_date, service_id")
+          .eq("customer_id", user.id)
+          .order("service_date", { ascending: false })
+          .limit(8);
+        const enrichedHist = (hist ?? []).map((h: any) => ({
+          service_date: h.service_date,
+          service_name: services.find((s) => s.id === h.service_id)?.name,
+        }));
+        const { data, error } = await supabase.functions.invoke("ai-service-recommender", {
+          body: {
+            vehicle: veh ? { make: veh.make, model: veh.model, year: veh.year } : null,
+            selected_service_ids: Array.from(selectedIds),
+            candidate_services: services.map((s) => ({ id: s.id, name: s.name, category: s.category, price: s.price, description: (s as any).description })),
+            history: enrichedHist,
+          },
+        });
+        if (!error && data?.recommendations) setAiRecs(data.recommendations);
+      } catch {
+        // silent — fall back to rule-based recommended
+      } finally {
+        setAiRecsLoading(false);
+      }
+    }, 600); // debounce
+    return () => clearTimeout(handle);
+  }, [selectedIds, services, vehicles, selectedVehicle, user]);
+
   const subtotal = selectedServices.reduce((s, x) => s + Number(x.price || 0), 0);
   const totalDuration = selectedServices.reduce((s, x) => s + (x.duration_minutes || 0), 0);
   const surcharge = subtotal * (PRIORITY_MULTIPLIER[priority] - 1);
@@ -163,14 +203,22 @@ const BookService = () => {
             })}
           </div>
 
-          {recommended.length > 0 && (
+          {(aiRecs.length > 0 || recommended.length > 0) && (
             <div className="bg-gradient-to-br from-primary/5 to-primary/0 p-5 rounded-xl border border-primary/20">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-bold text-on-surface">Recommended for your selection</h3>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-bold text-on-surface">
+                    {aiRecs.length > 0 ? "AI-recommended add-ons" : "Recommended for your selection"}
+                  </h3>
+                </div>
+                {aiRecsLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {recommended.map((r) => (
+                {(aiRecs.length > 0
+                  ? aiRecs.map((r) => ({ ...services.find((s) => s.id === r.id)!, reason: r.reason, confidence: r.confidence })).filter((s) => s.id)
+                  : recommended.map((r) => ({ ...r, reason: "", confidence: 0 }))
+                ).map((r) => (
                   <button
                     key={r.id}
                     onClick={() => toggleService(r.id)}
@@ -178,7 +226,11 @@ const BookService = () => {
                   >
                     <p className="text-sm font-bold text-on-surface">{r.name}</p>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{r.category}</p>
-                    <p className="text-sm font-mono text-primary mt-1 font-bold">+{formatINR(r.price)}</p>
+                    {r.reason && <p className="text-[11px] text-on-surface/80 mt-1 leading-snug">{r.reason}</p>}
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm font-mono text-primary font-bold">+{formatINR(r.price)}</p>
+                      {r.confidence > 0 && <span className="text-[9px] font-bold text-primary/70">{r.confidence}% match</span>}
+                    </div>
                   </button>
                 ))}
               </div>

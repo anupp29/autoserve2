@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Users, Star, Activity } from "lucide-react";
+import { Search, Users, Star, Activity, UserPlus } from "lucide-react";
 import { useLiveTable } from "@/hooks/useRealtimeQuery";
 import { useProfilesByRole } from "@/hooks/useStaff";
 import { formatINR, formatDate, initials } from "@/lib/format";
@@ -7,25 +7,48 @@ import { formatINR, formatDate, initials } from "@/lib/format";
 interface Vehicle { id: string; make: string; model: string; year: number; registration: string; owner_id: string; }
 interface Booking { id: string; customer_id: string; total_cost: number | null; status: string; }
 interface History { id: string; customer_id: string; cost: number; service_date: string; }
+interface ProfileRow { user_id: string; created_at: string; }
 
 const ManagerCustomers = () => {
   const { profiles: customers } = useProfilesByRole("customer");
   const { data: vehicles } = useLiveTable<Vehicle>("vehicles", (q) => q);
   const { data: bookings } = useLiveTable<Booking>("bookings", (q) => q);
   const { data: history } = useLiveTable<History>("service_history", (q) => q);
+  // Fetch created_at from profiles for "new" badges + sort.
+  const { data: profileMeta } = useLiveTable<ProfileRow>("profiles", (q) => q.order("created_at", { ascending: false }));
+  const createdMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    profileMeta.forEach((p) => { m[p.user_id] = p.created_at; });
+    return m;
+  }, [profileMeta]);
+
   const [search, setSearch] = useState("");
 
+  const sortedCustomers = useMemo(
+    () => [...customers].sort((a, b) => {
+      const ta = createdMap[a.user_id] ? +new Date(createdMap[a.user_id]) : 0;
+      const tb = createdMap[b.user_id] ? +new Date(createdMap[b.user_id]) : 0;
+      return tb - ta; // newest first
+    }),
+    [customers, createdMap]
+  );
+
   const filtered = useMemo(() => {
-    return customers.filter((c) => {
+    return sortedCustomers.filter((c) => {
       if (!search) return true;
       const hay = `${c.full_name} ${c.phone ?? ""}`.toLowerCase();
       return hay.includes(search.toLowerCase());
     });
-  }, [customers, search]);
+  }, [sortedCustomers, search]);
 
   const totalSpend = history.reduce((s, h) => s + Number(h.cost || 0), 0);
   const avgLtv = customers.length ? totalSpend / customers.length : 0;
   const activeBookings = bookings.filter((b) => b.status !== "completed" && b.status !== "cancelled").length;
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const newThisWeek = customers.filter((c) => {
+    const t = createdMap[c.user_id] ? +new Date(createdMap[c.user_id]) : 0;
+    return t >= sevenDaysAgo;
+  }).length;
 
   return (
     <div className="space-y-8">
@@ -36,8 +59,8 @@ const ManagerCustomers = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Kpi label="Total Customers" value={String(customers.length)} icon={Users} bg="bg-primary/10" color="text-primary" />
-        <Kpi label="Total Vehicles" value={String(vehicles.length)} icon={Star} bg="bg-amber-50" color="text-amber-600" />
-        <Kpi label="Active Bookings" value={String(activeBookings)} icon={Activity} bg="bg-emerald-50" color="text-emerald-600" />
+        <Kpi label="New This Week" value={String(newThisWeek)} icon={UserPlus} bg="bg-emerald-50" color="text-emerald-600" />
+        <Kpi label="Active Bookings" value={String(activeBookings)} icon={Activity} bg="bg-amber-50" color="text-amber-600" />
         <Kpi label="Avg. Lifetime Value" value={formatINR(avgLtv)} icon={Star} bg="bg-primary/10" color="text-primary" mono />
       </div>
 
@@ -70,14 +93,21 @@ const ManagerCustomers = () => {
                 const myHistory = history.filter((h) => h.customer_id === c.user_id);
                 const spend = myHistory.reduce((s, h) => s + Number(h.cost || 0), 0);
                 const last = myHistory.sort((a, b) => +new Date(b.service_date) - +new Date(a.service_date))[0];
+                const joinedAt = createdMap[c.user_id];
+                const isNew = joinedAt && +new Date(joinedAt) >= sevenDaysAgo;
                 return (
                   <tr key={c.user_id} className="hover:bg-surface-container-low/50 transition-colors">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{initials(c.full_name)}</div>
                         <div>
-                          <p className="text-sm font-semibold text-on-surface">{c.full_name}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono">#{c.user_id.slice(0, 8)}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-on-surface">{c.full_name}</p>
+                            {isNew && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">New</span>}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            #{c.user_id.slice(0, 8)}{joinedAt ? ` • Joined ${formatDate(joinedAt)}` : ""}
+                          </p>
                         </div>
                       </div>
                     </td>
